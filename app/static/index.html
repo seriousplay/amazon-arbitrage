@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Amazon Arbitrage Agent</title>
+<style>
+:root{--bg:#090b10;--surface:#12151e;--surface2:#1a1e2a;--surface3:#222738;--border:#252a36;--text:#e4e7ee;--text2:#6b7185;--accent:#5b8af7;--green:#20a85d;--orange:#e89520;--red:#e04444;--purple:#7c5cf0;--radius:10px;--r2:6px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh}
+.container{max-width:960px;margin:0 auto;padding:20px 24px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:10}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-left h1{font-size:17px;font-weight:600}
+.header-left .dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block}
+.status-badge{font-size:11px;padding:3px 10px;border-radius:12px;font-weight:500}
+.status-badge.ready{background:rgba(32,168,93,.12);color:var(--green)}
+.status-badge.busy{background:rgba(91,138,247,.12);color:var(--accent)}
+
+/* Control bar */
+.control-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:20px 0}
+.control-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.control-row label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
+.cat-select{flex:1;min-width:200px;position:relative}
+.cat-select .selected{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.cat-select .selected:hover{border-color:var(--accent)}
+.cat-select .dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);max-height:200px;overflow-y:auto;z-index:20;margin-top:4px}
+.cat-select .dropdown.open{display:block}
+.cat-select .dropdown label{display:flex;align-items:center;gap:6px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text);text-transform:none;letter-spacing:0}
+.cat-select .dropdown label:hover{background:rgba(91,138,247,.1)}
+.cat-select .dropdown input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent)}
+.cat-select .dropdown .search-input{margin:6px;width:calc(100% - 12px);padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:12px;outline:none}
+.num-input{width:80px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:13px;outline:none;text-align:center}
+.num-input:focus{border-color:var(--accent)}
+
+.btn{padding:10px 20px;border:none;border-radius:var(--r2);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#4a7be6}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{padding:8px 14px;font-size:11px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer}.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+
+/* Loading state */
+.loading-state{text-align:center;padding:60px 20px}
+.loading-state .spinner{display:inline-block;width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state .msg{font-size:14px;color:var(--text2)}
+.loading-state .sub{font-size:12px;color:var(--text2);margin-top:4px;opacity:.7}
+
+/* Empty state */
+.empty-state{text-align:center;padding:80px 20px}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state h2{font-size:18px;font-weight:600;margin-bottom:6px}
+.empty-state p{font-size:13px;color:var(--text2);max-width:400px;margin:0 auto}
+
+/* Summary cards */
+.summary-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;flex:1;min-width:140px}
+.summary-card .count{font-size:26px;font-weight:800;margin-bottom:2px}
+.summary-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.summary-card.s-grade{border-left:3px solid var(--green)}.summary-card.s-grade .count{color:var(--green)}
+.summary-card.a-grade{border-left:3px solid var(--accent)}.summary-card.a-grade .count{color:var(--accent)}
+.summary-card.info-grade{border-left:3px solid var(--border)}
+.summary-card.info-grade .count{color:var(--text)}
+
+/* Product cards — clickable expandable */
+.product-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;transition:border-color .15s;cursor:pointer}
+.product-card:hover{border-color:var(--accent)}
+.product-card.s-grade{border-left:3px solid var(--green)}
+.product-card.a-grade{border-left:3px solid var(--accent)}
+.product-card.b-grade{border-left:3px solid var(--orange)}
+.product-card.expanded{border-color:var(--accent)}
+.product-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:12px}
+.product-title{font-size:14px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.product-score{font-size:26px;font-weight:800;font-family:monospace;white-space:nowrap}
+.product-meta{font-size:11px;color:var(--text2);margin-bottom:6px;display:flex;gap:12px;flex-wrap:wrap}
+.product-meta span{display:flex;align-items:center;gap:3px}
+.product-reason{font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.6;padding:8px 10px;background:var(--surface2);border-radius:var(--r2)}
+.product-warnings{font-size:11px;margin-bottom:6px}
+.product-warnings span{display:inline-block;padding:2px 8px;border-radius:8px;margin:2px 4px 2px 0;font-size:10px}
+.warn-risk{background:rgba(224,68,68,.1);color:var(--red)}
+.warn-info{background:rgba(124,92,240,.1);color:var(--purple)}
+.warn-trend{background:rgba(91,138,247,.1);color:var(--accent)}
+.warn-good{background:rgba(32,168,93,.1);color:var(--green)}
+
+/* Dimension bars */
+.dim-bars{display:flex;gap:4px;margin-top:6px}
+.dim-bar{flex:1;height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.dim-bar .fill{height:100%;border-radius:2px}
+.fill-green{background:var(--green)}.fill-blue{background:var(--accent)}.fill-orange{background:var(--orange)}.fill-purple{background:var(--purple)}.fill-red{background:var(--red)}
+
+/* ─── Expandable detail panel ─── */
+.card-expand{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease, margin .25s ease;opacity:0;margin-top:0}
+.card-expand.open{max-height:2500px;opacity:1;margin-top:14px}
+.expand-inner{border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:12px}
+.detail-section{background:var(--surface2);border-radius:var(--r2);padding:12px;font-size:12px}
+.detail-section h4{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.detail-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0}
+.detail-item .key{color:var(--text2)}
+.detail-item .val{color:var(--text);font-weight:500;text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis}
+.detail-item .val a{color:var(--accent);text-decoration:none}
+.detail-item .val a:hover{text-decoration:underline}
+.detail-section .rule-line{padding:3px 0;display:flex;gap:6px;align-items:center}
+.rule-pass{color:var(--green);font-size:10px}
+.badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:500}
+.badge-up{background:rgba(32,168,93,.12);color:var(--green)}
+.badge-down{background:rgba(224,68,68,.12);color:var(--red)}
+.badge-flat{background:rgba(107,113,133,.12);color:var(--text2)}
+.badge-high{background:rgba(224,68,68,.12);color:var(--red)}
+.badge-medium{background:rgba(232,149,32,.12);color:var(--orange)}
+.badge-low{background:rgba(32,168,93,.12);color:var(--green)}
+
+/* Error */
+.error-msg{background:rgba(224,68,68,.08);border:1px solid var(--red);border-radius:var(--r2);padding:12px;font-size:12px;color:var(--red);margin-top:12px}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span class="dot"></span>
+    <h1>Amazon Arbitrage Agent</h1>
+    <span class="status-badge ready" id="agentStatus">就绪</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span style="font-size:11px;color:var(--text2)" id="loginDot"></span>
+    <button class="btn-ghost" onclick="refreshAll()">刷新</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Control bar -->
+  <div class="control-bar">
+    <div class="control-row">
+      <div class="cat-select">
+        <label>扫描品类</label>
+        <div class="selected" onclick="$('catDropdown').classList.toggle('open')">
+          <span id="catLabel">选择品类...</span>
+          <span style="font-size:10px;color:var(--text2)">▼</span>
+        </div>
+        <div class="dropdown" id="catDropdown">
+          <input class="search-input" placeholder="搜索..." oninput="filterCats(this.value)">
+          <div id="catOptions"></div>
+        </div>
+      </div>
+      <div>
+        <label>商品数</label>
+        <input class="num-input" id="scanCount" value="15" type="number" min="5" max="50">
+      </div>
+      <div style="align-self:flex-end;display:flex;gap:6px">
+        <button class="btn btn-primary" id="btnDiscover" onclick="runDiscover()">🔍 发现</button>
+        <button class="btn" id="btnMatch" onclick="runMatch()" style="background:var(--green);color:#fff;display:none">🔗 匹配1688</button>
+        <button class="btn-ghost" id="btnSchedule" onclick="toggleSchedule()" title="切换定时扫描">⏰</button>
+      </div>
+    </div>
+    <div id="actionInfo" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+    <div id="scheduleInfo" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
+  </div>
+
+  <!-- Content -->
+  <div id="mainContent">
+    <div class="empty-state">
+      <div class="icon">🤖</div>
+      <h2>智能选品助手就绪</h2>
+      <p>选择品类后点击「发现」，AI 将自动完成 Amazon 发现 → 1688 匹配 → 7 维评分</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API='/api/v1';
+let cats=[],selected=new Set(),scanTask=null,hasDiscovered=false,rulesCache=null;
+
+// ─── Phase 1: Discover ──────────────────
+async function runDiscover(){
+  if(selected.size===0){alert('请选择至少一个品类');return}
+  const btn=$('btnDiscover'),count=parseInt($('scanCount').value)||15;
+  btn.disabled=true;btn.textContent='发现中...';hasDiscovered=false;
+  $('agentStatus').textContent='工作中';$('agentStatus').className='status-badge busy';
+  $('btnMatch').style.display='none';
+  $('mainContent').innerHTML=`<div class="loading-state"><div class="spinner"></div><div class="msg">🔍 正在发现 Amazon 热销商品...</div></div>`;
+
+  const ids=Array.from(selected);
+  for(const id of ids){
+    const cat=cats.find(c=>c.id===id);if(!cat)continue;
+    try{
+      const p=new URLSearchParams({category:cat.name,max_products:count});
+      if(cat.bsr_url)p.append('bsr_url',cat.bsr_url);
+      const d=await api('/scan/discover-only?'+p,{method:'POST'});
+      scanTask=d.task_id;hasDiscovered=true;
+    }catch(e){$('mainContent').innerHTML=`<div class="error-msg">${e.message}</div>`;break}
+  }
+  if(scanTask)await waitAndShow(scanTask);
+  btn.disabled=false;btn.textContent='🔍 发现';
+  $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
+  if(hasDiscovered){$('btnMatch').style.display='';$('actionInfo').textContent='✅ 发现完成，点击「🔗 匹配1688」开始货源匹配';}
+}
+
+// ─── Phase 2: Match ─────────────────────
+async function runMatch(){
+  if(!scanTask){alert('请先执行发现阶段');return}
+  const btn=$('btnMatch');
+  btn.disabled=true;btn.textContent='匹配中...';
+  $('agentStatus').textContent='工作中';$('agentStatus').className='status-badge busy';
+  $('mainContent').innerHTML=`<div class="loading-state"><div class="spinner"></div><div class="msg">🔗 正在匹配 1688 货源...</div></div>`;
+  try{await api('/scan/'+scanTask+'/match-now',{method:'POST'});await waitAndShow(scanTask);}
+  catch(e){$('mainContent').innerHTML=`<div class="error-msg">${e.message}</div>`}
+  btn.disabled=false;btn.textContent='🔗 匹配1688';
+  $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
+  $('actionInfo').textContent='';
+}
+
+// ─── Helpers ────────────────────────────
+function $(id){return document.getElementById(id)}
+function fm(n,d){return Number(n||0).toFixed(d||1)}
+function nn(v,f){return v!=null&&v!==undefined?v: (f||'--')}
+async function api(path,opt){const r=await fetch(API+path,opt||{});if(!r.ok){const t=await r.text();throw new Error(t||r.status)}return r.json()}
+
+// ─── Categories ────────────────────────
+async function loadCats(){
+  try{const d=await api('/results/categories');cats=d.categories||[];renderCatOptions()}catch(e){}
+}
+function renderCatOptions(f){
+  const fl=(f||'').toLowerCase();
+  const shown=cats.filter(c=>!fl||c.name.toLowerCase().includes(fl)||c.id.includes(fl));
+  $('catOptions').innerHTML=shown.map(c=>
+    `<label><input type="checkbox" ${selected.has(c.id)?'checked':''} onchange="toggleCat('${c.id}')">${c.name}</label>`
+  ).join('')||'<div style="padding:10px;font-size:12px;color:var(--text2)">无匹配</div>';
+  updateCatLabel();
+}
+function filterCats(v){renderCatOptions(v)}
+function toggleCat(id){
+  if(selected.has(id))selected.delete(id);else selected.add(id);
+  updateCatLabel();renderCatOptions();
+}
+function updateCatLabel(){
+  if(selected.size===0){$('catLabel').textContent='选择品类...';return}
+  const names=Array.from(selected).map(id=>{const c=cats.find(x=>x.id===id);return c?c.name:id});
+  $('catLabel').textContent=names.join(', ');
+}
+
+// ─── Login status ──────────────────────
+async function loadLogin(){
+  try{const d=await api('/status/login');
+    $('loginDot').textContent=d.status==='ok'?'1688 ✓':'1688 ✗';
+    $('loginDot').style.color=d.status==='ok'?'var(--green)':'var(--orange)';
+  }catch(e){}
+}
+
+// ─── Rules ──────────────────────────────
+async function ensureRules(){
+  if(rulesCache)return rulesCache;
+  try{rulesCache=await api('/scan/rules');return rulesCache}catch(e){return {}}
+}
+function renderRulesSummary(rules){
+  if(!rules||!Object.keys(rules).length)return '';
+  const items=[
+    ['最低售价',rules.min_price,'$'],
+    ['最高售价',rules.max_price,'$'],
+    ['最低评分',rules.min_rating,''],
+    ['最少评论',rules.min_reviews,''],
+    ['BSR上限',rules.max_bsr_rank,'#'],
+    ['最低利润率',rules.min_profit_margin,'%'],
+    ['最低价差倍率',rules.min_price_ratio,'×'],
+  ];
+  return items.map(([k,v,u])=>
+    `<div class="rule-line"><span class="rule-pass">✓</span><span>${k}: ${v}${u}</span></div>`
+  ).join('');
+}
+
+// ─── Wait & render ────────────────────
+async function waitAndShow(tid){
+  const steps=[];
+  for(let i=0;i<90;i++){
+    await new Promise(r=>setTimeout(r,2000));
+    try{
+      const d=await api('/results/task/'+tid);
+      if(d.phase==='done'){renderResults(d);return}
+      const step=d.current_step||'处理中...';
+      const pct=Math.round(d.progress*100);
+      if(!steps.includes(step))steps.push(step);
+      $('mainContent').innerHTML=`
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <div class="msg">🤖 AI 正在分析选品机会</div>
+          <div style="margin-top:12px;width:300px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-left:auto;margin-right:auto">
+            <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .5s;width:${pct}%"></div>
+          </div>
+          <div class="sub">${pct}% · ${step}</div>
+          <div style="margin-top:16px;text-align:left;max-width:400px;margin-left:auto;margin-right:auto;font-size:11px;color:var(--text2);line-height:2">
+            ${steps.map((s,i)=>`<div>${i+1}. ${s}</div>`).join('')}
+          </div>
+        </div>`;
+    }catch(e){}
+  }
+  try{const d=await api('/results/task/'+tid);renderResults(d)}catch(e){}
+}
+
+// ─── Render results ────────────────────
+async function renderResults(d){
+  const list=d.breakout_results||[];
+  await ensureRules();
+
+  if(!list.length){
+    $('mainContent').innerHTML=`<div class="empty-state"><div class="icon">📭</div><h2>暂无匹配结果</h2><p>该品类下未发现符合条件的商品，可调整选品规则后重试</p></div>`;
+    return;
+  }
+
+  const sCount=list.filter(r=>r.breakout_score.grade==='S级爆款').length;
+  const aCount=list.filter(r=>r.breakout_score.grade==='A级潜力').length;
+  const bCount=list.filter(r=>r.breakout_score.grade==='B级观察').length;
+  const avgMarginList=list.filter(r=>r.profit_margin);
+  const avgMargin=avgMarginList.length?avgMarginList.reduce((s,r)=>s+r.profit_margin,0)/avgMarginList.length:0;
+  const riskWarns=list.filter(r=>r.risk_assessment&&r.risk_assessment.level!=='低风险').length;
+  const upTrends=list.filter(r=>r.trend_data&&r.trend_data.direction==='up').length;
+  const matched=list.filter(r=>r.has_match).length;
+
+  const parts=[];
+  if(sCount)parts.push(`🎯 ${sCount} 个S级爆款`);
+  if(aCount)parts.push(`💡 ${aCount} 个A级潜力`);
+  if(avgMargin)parts.push(`💰 均利润率 ${fm(avgMargin,1)}%`);
+  if(matched)parts.push(`🔗 ${matched}/${list.length} 已匹配1688`);
+  if(upTrends)parts.push(`📈 ${upTrends} 个上升趋势`);
+  if(riskWarns)parts.push(`⚠️ ${riskWarns} 个需关注风险`);
+
+  $('mainContent').innerHTML=`
+    <div class="summary-bar">
+      <div class="summary-card s-grade"><div class="count">${sCount}</div><div class="label">S级爆款</div></div>
+      <div class="summary-card a-grade"><div class="count">${aCount}</div><div class="label">A级潜力</div></div>
+      <div class="summary-card info-grade"><div class="count">${bCount}</div><div class="label">B级观察</div></div>
+      <div class="summary-card info-grade"><div class="count">${list.length}</div><div class="label">总计评估</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.8">
+      🤖 <b>AI 分析：</b>${parts.join(' · ')} · ${d.category} 类目
+      <span style="margin-left:8px;font-size:11px;opacity:.7">点击卡片展开详情 ›</span>
+    </div>
+    ${list.slice(0,15).map((p,i)=>renderProductCard(p,i)).join('')}`;
+}
+
+// ─── Render a single product card ──────
+function renderProductCard(p,idx){
+  const bs=p.breakout_score;const d=bs.dimensions;
+  const gradeColors={'S级爆款':'var(--green)','A级潜力':'var(--accent)','B级观察':'var(--orange)'};
+  const gc=gradeColors[bs.grade]||'var(--text2)';
+
+  const reasons=[];
+  if(d.product_fundamentals>=15)reasons.push('产品力强（高评分+大量评论验证需求）');
+  else if(d.product_fundamentals>=10)reasons.push('产品基本面良好');
+  if(d.market_demand>=15)reasons.push('市场需求旺盛（头部BSR排名）');
+  else if(d.market_demand>=8)reasons.push('需求稳定');
+  if(d.profit_potential>=15)reasons.push('利润空间充足（1688价差显著）');
+  else if(d.profit_potential>=8)reasons.push('有盈利空间');
+  if(d.competition>=10)reasons.push('竞争格局有利（蓝海机会）');
+  if(d.supply_chain>=8)reasons.push('1688供应链成熟');
+  if(d.risk>=8)reasons.push('风险可控');
+  if(d.trend>=4)reasons.push('搜索热度上升');
+
+  const risk=p.risk_assessment;
+  const risks=risk?risk.risks||[]:[];
+  const trend=p.trend_data;
+
+  const dimMax=20;
+  const dims=[
+    {v:d.product_fundamentals,m:20,c:'fill-green',l:'产品力'},
+    {v:d.market_demand,m:20,c:'fill-blue',l:'需求'},
+    {v:d.competition,m:15,c:'fill-purple',l:'竞争'},
+    {v:d.profit_potential,m:20,c:'fill-green',l:'利润'},
+    {v:d.supply_chain,m:10,c:'fill-blue',l:'供应链'},
+    {v:d.risk,m:10,c:d.risk>=8?'fill-green':d.risk>=5?'fill-orange':'fill-red',l:'风险'},
+    {v:d.trend,m:5,c:d.trend>=4?'fill-green':d.trend>=3?'fill-blue':'fill-orange',l:'趋势'},
+  ];
+
+  return `<div class="product-card ${bs.grade==='S级爆款'?'s-grade':bs.grade==='A级潜力'?'a-grade':'b-grade'}" onclick="toggleCard(${idx})">
+    <div class="product-header">
+      <div class="product-title" title="${esc(p.title)}">${esc(p.title)}</div>
+      <div class="product-score" style="color:${gc}">${fm(bs.total,1)}</div>
+    </div>
+    <div class="product-meta">
+      <span>🏷️ ${bs.grade}</span>
+      <span>📊 BSR #${nn(p.rank)}</span>
+      <span>💵 ${p.price?'$'+p.price:'--'}</span>
+      <span>⭐ ${nn(p.rating)}</span>
+      <span>💬 ${nn(p.review_count,0)}评</span>
+      ${p.profit_margin?`<span>📈 ${fm(p.profit_margin,1)}%利润</span>`:''}
+      ${p.has_match?'<span style="color:var(--green)">✅ 已匹配</span>':'<span style="color:var(--text2)">⏳ 待匹配</span>'}
+      <span style="font-size:10px;color:var(--accent);margin-left:auto">▼ 详情</span>
+    </div>
+    <div class="product-reason">💡 ${reasons.length?reasons.join('；'):'数据不足'}</div>
+    ${risks.length||trend?`<div class="product-warnings">
+      ${risks.map(r=>`<span class="warn-risk">⚠️ ${esc(r)}</span>`).join('')}
+      ${trend&&trend.matched_keyword?`<span class="warn-trend">📊 ${trend.recommendation}</span>`:''}
+    </div>`:''}
+    <div class="dim-bars">${dims.map(dm=>`<div class="dim-bar" title="${dm.l}: ${fm(dm.v,1)}/${dm.m}"><div class="fill ${dm.c}" style="width:${(dm.v/dm.m)*100}%"></div></div>`).join('')}</div>
+
+    <!-- Expandable detail panel -->
+    <div class="card-expand" id="expand-${idx}">
+      <div class="expand-inner">
+        ${renderDetailBasic(p)}
+        ${renderDetailMatch(p)}
+        ${renderDetailDimensions(p,bs)}
+        ${renderDetailRisk(p,risk)}
+        ${renderDetailTrend(p,trend)}
+        ${renderDetailRules()}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── Toggle card expand ────────────────
+function toggleCard(idx){
+  const el=$('expand-'+idx);
+  if(!el)return;
+  const isOpen=el.classList.contains('open');
+  el.classList.toggle('open');
+  // scroll into view when opening
+  if(!isOpen){
+    setTimeout(()=>{
+      const card=el.closest('.product-card');
+      if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },100);
+  }
+}
+
+// ─── Detail panel sections ──────────────
+
+function renderDetailBasic(p){
+  return `<div class="detail-section">
+    <h4>📋 基本信息</h4>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="key">ASIN</span><span class="val"><a href="https://www.amazon.com/dp/${p.asin}" target="_blank" rel="noopener">${p.asin} ↗</a></span></div>
+      <div class="detail-item"><span class="key">品牌</span><span class="val">${nn(p.brand,'未知')}</span></div>
+      <div class="detail-item"><span class="key">品类路径</span><span class="val">${nn(p.category_path,'未知')}</span></div>
+      <div class="detail-item"><span class="key">Amazon售价</span><span class="val" style="color:var(--green)">${p.price?'$'+p.price:'--'}</span></div>
+      <div class="detail-item"><span class="key">评分</span><span class="val">⭐ ${nn(p.rating)}</span></div>
+      <div class="detail-item"><span class="key">评论数</span><span class="val">${nn(p.review_count,0)}</span></div>
+      <div class="detail-item"><span class="key">BSR排名</span><span class="val">#${nn(p.rank)}</span></div>
+      <div class="detail-item"><span class="key">利润率</span><span class="val" style="color:${p.profit_margin>=30?'var(--green)':'var(--orange)'}">${p.profit_margin?fm(p.profit_margin,1)+'%':'待匹配'}</span></div>
+    </div>
+  </div>`;
+}
+
+function renderDetailMatch(p){
+  if(!p.has_match||!p.match_score)return '';
+  return `<div class="detail-section">
+    <h4>🔗 1688 匹配详情</h4>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="key">匹配分</span><span class="val" style="color:${p.match_score>=70?'var(--green)':'var(--orange)'}">${fm(p.match_score,1)}</span></div>
+      <div class="detail-item"><span class="key">预估利润</span><span class="val" style="color:var(--green)">${p.profit_margin?fm(p.profit_margin,1)+'%':'--'}</span></div>
+    </div>
+  </div>`;
+}
+
+function renderDetailDimensions(p,bs){
+  const d=bs.dimensions;
+  const allDims=[
+    {k:'product_fundamentals',l:'产品力',v:d.product_fundamentals,m:20,desc:'评分+评论数综合评估产品的市场验证程度',c:d.product_fundamentals>=15?'green':d.product_fundamentals>=10?'blue':'orange'},
+    {k:'market_demand',l:'市场需求',v:d.market_demand,m:20,desc:'BSR排名反映搜索量级、评论增长率体现需求趋势',c:d.market_demand>=15?'green':d.market_demand>=8?'blue':'orange'},
+    {k:'competition',l:'竞争格局',v:d.competition,m:15,desc:'BSR排名与评论数分布推断竞争激烈程度',c:d.competition>=10?'green':d.competition>=5?'blue':'orange'},
+    {k:'profit_potential',l:'利润空间',v:d.profit_potential,m:20,desc:'Amazon售价与1688成本价的价差评估',c:d.profit_potential>=15?'green':d.profit_potential>=8?'blue':'orange'},
+    {k:'supply_chain',l:'供应链',v:d.supply_chain,m:10,desc:'1688匹配成功率、起订量、供应商评分',c:d.supply_chain>=8?'green':d.supply_chain>=5?'blue':'orange'},
+    {k:'risk',l:'风险',v:d.risk,m:10,desc:'商标/专利/认证/合规风险综合评估',c:d.risk>=8?'green':d.risk>=5?'orange':'red'},
+    {k:'trend',l:'趋势',v:d.trend,m:5,desc:'Google Trends搜索热度 + 季节性 + 品类生命周期',c:d.trend>=4?'green':d.trend>=3?'blue':'orange'},
+  ];
+  return `<div class="detail-section">
+    <h4>📊 评分维度详解</h4>
+    ${allDims.map(di=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+        <div style="width:50px;font-size:11px;font-weight:600;color:var(--${di.c})">${fm(di.v,1)}/${di.m}</div>
+        <div style="flex:1">
+          <div style="font-size:12px">${di.l}</div>
+          <div style="font-size:10px;color:var(--text2)">${di.desc}</div>
+        </div>
+        <div style="width:60px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+          <div style="height:100%;background:var(--${di.c});border-radius:2px;width:${(di.v/di.m)*100}%"></div>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function renderDetailRisk(p,risk){
+  if(!risk)return '';
+  const items=risk.risks||[];
+  const level=risk.level||'未知';
+  const levelColor=level==='低风险'?'low':level==='中风险'?'medium':'high';
+  return `<div class="detail-section">
+    <h4>⚠️ 风险评估 <span class="badge badge-${levelColor}">${esc(level)}</span></h4>
+    ${items.length?items.map(r=>`<div style="padding:3px 0;font-size:12px;display:flex;gap:6px"><span style="color:var(--red)">•</span>${esc(r)}</div>`).join(''):'<div style="color:var(--text2);font-size:12px">未发现明显风险</div>'}
+  </div>`;
+}
+
+function renderDetailTrend(p,trend){
+  if(!trend)return '';
+  const dirBadge=trend.direction==='up'?'up':trend.direction==='down'?'down':'flat';
+  const confBadge=trend.confidence==='high'?'low':trend.confidence==='medium'?'medium':'high';
+  return `<div class="detail-section">
+    <h4>📈 趋势信号 <span class="badge badge-${dirBadge}">${trend.direction==='up'?'上升':trend.direction==='down'?'下降':'平稳'}</span></h4>
+    <div class="detail-grid">
+      <div class="detail-item"><span class="key">匹配关键词</span><span class="val">${esc(trend.matched_keyword||'--')}</span></div>
+      <div class="detail-item"><span class="key">热度指数</span><span class="val">${nn(trend.popularity)}/100</span></div>
+      <div class="detail-item"><span class="key">近1月变化</span><span class="val" style="color:${trend.change_1m>=0?'var(--green)':'var(--red)'}">${trend.change_1m>=0?'+':''}${fm(trend.change_1m,1)}%</span></div>
+      <div class="detail-item"><span class="key">近3月变化</span><span class="val" style="color:${trend.change_3m>=0?'var(--green)':'var(--red)'}">${trend.change_3m>=0?'+':''}${fm(trend.change_3m,1)}%</span></div>
+      <div class="detail-item"><span class="key">近6月变化</span><span class="val" style="color:${trend.change_6m>=0?'var(--green)':'var(--red)'}">${trend.change_6m>=0?'+':''}${fm(trend.change_6m,1)}%</span></div>
+      <div class="detail-item"><span class="key">数据源</span><span class="val">${trend.source==='builtin'?'内建数据集':'BSR反推':'web'?'网络搜索':'估算'}</span></div>
+      <div class="detail-item"><span class="key">置信度</span><span class="val"><span class="badge badge-${confBadge}">${trend.confidence||'medium'}</span></span></div>
+      ${trend.seasonality_peak&&trend.seasonality_peak.length?`<div class="detail-item"><span class="key">季节性高峰</span><span class="val">${trend.seasonality_peak.map(m=>m+'月').join('、')}</span></div>`:''}
+      ${trend.related_queries&&trend.related_queries.length?`<div class="detail-item"><span class="key">相关搜索词</span><span class="val" style="font-size:10px">${trend.related_queries.slice(0,5).join(', ')}</span></div>`:''}
+    </div>
+  </div>`;
+}
+
+function renderDetailRules(){
+  if(!rulesCache)return '';
+  return `<div class="detail-section">
+    <h4>⚙️ 应用规则</h4>
+    ${renderRulesSummary(rulesCache)}
+  </div>`;
+}
+
+// ─── Schedule ──────────────────────────
+let scheduleEnabled=false;
+async function loadSchedule(){
+  try{
+    const d=await api('/scan/schedule');
+    const t=d.tasks?.['weekly-scan'];
+    if(t){
+      scheduleEnabled=!!t.enabled;
+      $('btnSchedule').textContent=scheduleEnabled?'⏰ 定时:开':'⏰ 定时:关';
+      $('btnSchedule').style.color=scheduleEnabled?'var(--green)':'var(--text2)';
+      const last=d.last_runs?.['weekly-scan'];
+      $('scheduleInfo').style.display='block';
+      $('scheduleInfo').innerHTML=`每周${['','一','二','三','四','五','六','日'][t.day||1]} ${t.hour||9}:${String(t.minute||0).padStart(2,'0')} · ${t.categories?.length||0}个品类${last?` · 上次: ${new Date(last).toLocaleString()}`:''}`;
+    }
+  }catch(e){}
+}
+async function toggleSchedule(){
+  const enable=!scheduleEnabled;
+  await api('/scan/schedule/weekly-scan/toggle?enabled='+enable,{method:'POST'});
+  scheduleEnabled=enable;
+  $('btnSchedule').textContent=enable?'⏰ 定时:开':'⏰ 定时:关';
+  $('btnSchedule').style.color=enable?'var(--green)':'var(--text2)';
+}
+async function runScheduleNow(){
+  if(!confirm('立即执行每周定时扫描？将依次扫描配置的品类。'))return;
+  $('btnSchedule').textContent='⏰ 执行中...';
+  await api('/scan/schedule/weekly-scan/run-now',{method:'POST'});
+  alert('✓ 定时扫描已启动，请查看任务进度');
+  loadSchedule();
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+
+// ─── Init ──────────────────────────────
+async function refreshAll(){await Promise.all([loadLogin(),loadCats(),loadSchedule()])}
+refreshAll();
+</script>
+</body>
+</html>
