@@ -22,15 +22,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .control-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:20px 0}
 .control-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
 .control-row label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
-.cat-select{flex:1;min-width:200px;position:relative}
-.cat-select .selected{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:10px 12px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-.cat-select .selected:hover{border-color:var(--accent)}
-.cat-select .dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);max-height:200px;overflow-y:auto;z-index:20;margin-top:4px}
-.cat-select .dropdown.open{display:block}
-.cat-select .dropdown label{display:flex;align-items:center;gap:6px;padding:7px 12px;cursor:pointer;font-size:12px;color:var(--text);text-transform:none;letter-spacing:0}
-.cat-select .dropdown label:hover{background:rgba(91,138,247,.1)}
-.cat-select .dropdown input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent)}
-.cat-select .dropdown .search-input{margin:6px;width:calc(100% - 12px);padding:7px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:12px;outline:none}
 .num-input{width:80px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:13px;outline:none;text-align:center}
 .num-input:focus{border-color:var(--accent)}
 
@@ -87,7 +78,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .dim-bar .fill{height:100%;border-radius:2px}
 .fill-green{background:var(--green)}.fill-blue{background:var(--accent)}.fill-orange{background:var(--orange)}.fill-purple{background:var(--purple)}.fill-red{background:var(--red)}
 
-/* ─── Expandable detail panel ─── */
+/* Expandable detail panel */
 .card-expand{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease, margin .25s ease;opacity:0;margin-top:0}
 .card-expand.open{max-height:2500px;opacity:1;margin-top:14px}
 .expand-inner{border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:12px}
@@ -129,26 +120,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <div class="container">
 
-  <!-- Control bar -->
+  <!-- Control bar (simplified: no category dropdown) -->
   <div class="control-bar">
     <div class="control-row">
-      <div class="cat-select">
-        <label>扫描品类</label>
-        <div class="selected" onclick="$('catDropdown').classList.toggle('open')">
-          <span id="catLabel">选择品类...</span>
-          <span style="font-size:10px;color:var(--text2)">▼</span>
+      <div style="flex:1;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <label>每品类商品数</label>
+          <input class="num-input" id="scanCount" value="15" type="number" min="5" max="50">
         </div>
-        <div class="dropdown" id="catDropdown">
-          <input class="search-input" placeholder="搜索..." oninput="filterCats(this.value)">
-          <div id="catOptions"></div>
+        <div>
+          <label>覆盖 <span id="catCountDisplay" style="color:var(--accent)">--</span> 个品类</label>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px" id="catChips">加载中...</div>
         </div>
-      </div>
-      <div>
-        <label>商品数</label>
-        <input class="num-input" id="scanCount" value="15" type="number" min="5" max="50">
       </div>
       <div style="align-self:flex-end;display:flex;gap:6px">
-        <button class="btn btn-primary" id="btnDiscover" onclick="runDiscover()">🔍 发现</button>
+        <button class="btn btn-primary" id="btnDiscover" onclick="runDiscover()">🔍 全品类发现</button>
         <button class="btn" id="btnMatch" onclick="runMatch()" style="background:var(--green);color:#fff;display:none">🔗 匹配1688</button>
         <button class="btn-ghost" id="btnSchedule" onclick="toggleSchedule()" title="切换定时扫描">⏰</button>
       </div>
@@ -162,7 +148,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="empty-state">
       <div class="icon">🤖</div>
       <h2>智能选品助手就绪</h2>
-      <p>选择品类后点击「发现」，AI 将自动完成 Amazon 发现 → 1688 匹配 → 7 维评分</p>
+      <p>点击「全品类发现」扫描全部 20 个品类，AI 自动完成 Amazon 发现 → 7 维评分</p>
     </div>
   </div>
 
@@ -170,31 +156,56 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 const API='/api/v1';
-let cats=[],selected=new Set(),scanTask=null,hasDiscovered=false,rulesCache=null;
+let allCats=[],scanTask=null,hasDiscovered=false,rulesCache=null;
 
-// ─── Phase 1: Discover ──────────────────
+// ─── Phase 1: Discover all categories ────
 async function runDiscover(){
-  if(selected.size===0){alert('请选择至少一个品类');return}
+  if(!allCats.length){
+    // Try loading categories inline if not yet loaded
+    try{const d=await api('/results/categories');allCats=d.categories||[]}catch(e){}
+    if(!allCats.length){alert('品类列表未加载，请刷新后重试');return}
+  }
   const btn=$('btnDiscover'),count=parseInt($('scanCount').value)||15;
-  btn.disabled=true;btn.textContent='发现中...';hasDiscovered=false;
+  btn.disabled=true;btn.textContent='全品类扫描中...';hasDiscovered=false;
   $('agentStatus').textContent='工作中';$('agentStatus').className='status-badge busy';
-  $('btnMatch').style.display='none';
-  $('mainContent').innerHTML=`<div class="loading-state"><div class="spinner"></div><div class="msg">🔍 正在发现 Amazon 热销商品...</div></div>`;
+  $('btnMatch').style.display='none';$('actionInfo').textContent='';
 
-  const ids=Array.from(selected);
-  for(const id of ids){
-    const cat=cats.find(c=>c.id===id);if(!cat)continue;
+  const total=allCats.length;
+  let completed=0,lastTaskId=null;
+
+  for(const cat of allCats){
+    completed++;
+    $('mainContent').innerHTML=`
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="msg">🔍 正在扫描 (${completed}/${total}) ${cat.name}</div>
+        <div style="margin-top:12px;width:300px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-left:auto;margin-right:auto">
+          <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .5s;width:${(completed/total)*100}%"></div>
+        </div>
+        <div class="sub">${Math.round((completed/total)*100)}% · 品类 ${completed}/${total}</div>
+      </div>`;
     try{
       const p=new URLSearchParams({category:cat.name,max_products:count});
       if(cat.bsr_url)p.append('bsr_url',cat.bsr_url);
       const d=await api('/scan/discover-only?'+p,{method:'POST'});
-      scanTask=d.task_id;hasDiscovered=true;
-    }catch(e){$('mainContent').innerHTML=`<div class="error-msg">${e.message}</div>`;break}
+      lastTaskId=d.task_id;hasDiscovered=true;
+    }catch(e){
+      console.warn('品类扫描失败:',cat.name,e);
+    }
   }
-  if(scanTask)await waitAndShow(scanTask);
-  btn.disabled=false;btn.textContent='🔍 发现';
+
+  if(hasDiscovered&&lastTaskId){
+    await waitAndShow(lastTaskId);
+  }else{
+    $('mainContent').innerHTML=`<div class="error-msg">所有品类均扫描失败，请检查网络连接和服务器状态</div>`;
+  }
+
+  btn.disabled=false;btn.textContent='🔍 全品类发现';
   $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
-  if(hasDiscovered){$('btnMatch').style.display='';$('actionInfo').textContent='✅ 发现完成，点击「🔗 匹配1688」开始货源匹配';}
+  if(hasDiscovered){
+    $('btnMatch').style.display='';
+    $('actionInfo').textContent='✅ 全品类发现完成，点击「🔗 匹配1688」开始货源匹配';
+  }
 }
 
 // ─── Phase 2: Match ─────────────────────
@@ -217,27 +228,19 @@ function fm(n,d){return Number(n||0).toFixed(d||1)}
 function nn(v,f){return v!=null&&v!==undefined?v: (f||'--')}
 async function api(path,opt){const r=await fetch(API+path,opt||{});if(!r.ok){const t=await r.text();throw new Error(t||r.status)}return r.json()}
 
-// ─── Categories ────────────────────────
+// ─── Categories (read-only display) ─────
 async function loadCats(){
-  try{const d=await api('/results/categories');cats=d.categories||[];renderCatOptions()}catch(e){}
-}
-function renderCatOptions(f){
-  const fl=(f||'').toLowerCase();
-  const shown=cats.filter(c=>!fl||c.name.toLowerCase().includes(fl)||c.id.includes(fl));
-  $('catOptions').innerHTML=shown.map(c=>
-    `<label><input type="checkbox" ${selected.has(c.id)?'checked':''} onchange="toggleCat('${c.id}')">${c.name}</label>`
-  ).join('')||'<div style="padding:10px;font-size:12px;color:var(--text2)">无匹配</div>';
-  updateCatLabel();
-}
-function filterCats(v){renderCatOptions(v)}
-function toggleCat(id){
-  if(selected.has(id))selected.delete(id);else selected.add(id);
-  updateCatLabel();renderCatOptions();
-}
-function updateCatLabel(){
-  if(selected.size===0){$('catLabel').textContent='选择品类...';return}
-  const names=Array.from(selected).map(id=>{const c=cats.find(x=>x.id===id);return c?c.name:id});
-  $('catLabel').textContent=names.join(', ');
+  try{
+    const d=await api('/results/categories');
+    allCats=d.categories||[];
+    $('catCountDisplay').textContent=allCats.length;
+    // Show first 5 as chips, rest as "+N more"
+    const chips=allCats.slice(0,5).map(c=>c.name).join(', ');
+    const extra=allCats.length>5?` <span style="color:var(--text2)">+${allCats.length-5} 个更多</span>`:'';
+    $('catChips').innerHTML=chips+extra;
+  }catch(e){
+    $('catChips').textContent='获取品类列表失败，点击刷新重试';
+  }
 }
 
 // ─── Login status ──────────────────────
@@ -303,7 +306,7 @@ async function renderResults(d){
   await ensureRules();
 
   if(!list.length){
-    $('mainContent').innerHTML=`<div class="empty-state"><div class="icon">📭</div><h2>暂无匹配结果</h2><p>该品类下未发现符合条件的商品，可调整选品规则后重试</p></div>`;
+    $('mainContent').innerHTML=`<div class="empty-state"><div class="icon">📭</div><h2>暂无匹配结果</h2><p>未发现符合条件的商品，可调整选品规则后重试</p></div>`;
     return;
   }
 
@@ -332,7 +335,7 @@ async function renderResults(d){
       <div class="summary-card info-grade"><div class="count">${list.length}</div><div class="label">总计评估</div></div>
     </div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.8">
-      🤖 <b>AI 分析：</b>${parts.join(' · ')} · ${d.category} 类目
+      🤖 <b>AI 分析：</b>${parts.join(' · ')}
       <span style="margin-left:8px;font-size:11px;opacity:.7">点击卡片展开详情 ›</span>
     </div>
     ${list.slice(0,15).map((p,i)=>renderProductCard(p,i)).join('')}`;
@@ -413,7 +416,6 @@ function toggleCard(idx){
   if(!el)return;
   const isOpen=el.classList.contains('open');
   el.classList.toggle('open');
-  // scroll into view when opening
   if(!isOpen){
     setTimeout(()=>{
       const card=el.closest('.product-card');

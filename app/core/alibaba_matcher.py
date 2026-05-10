@@ -389,7 +389,53 @@ class AlibabaMatcher:
             self._last_debug["error"] = str(e)
             self._last_debug["traceback"] = traceback.format_exc()[-500:]
             logger.error(f"1688 搜索异常: {e}\n{traceback.format_exc()}")
+
+            # ── Playwright 失败，回退到 HTTP 直连搜索 ──
+            fallback = await self._search_http(keyword)
+            if fallback:
+                logger.info(f"✓ HTTP 回退搜索成功: {len(fallback)} 个结果")
+                self._last_debug["fallback"] = f"http:{len(fallback)}"
+                return fallback
+            logger.warning(f"HTTP 回退搜索也失败: {keyword[:40]}")
             return []
+
+    async def _search_http(self, keyword: str) -> List[PydanticAlibabaProduct]:
+        """HTTP 直连搜索 1688 — Playwright 超时时备用
+
+        直接请求 m.1688.com 移动端搜索页，用 BeautifulSoup 解析 SSR HTML。
+        不需要启动浏览器，速度快且更稳定。
+        """
+        import httpx
+        from bs4 import BeautifulSoup
+
+        encoded = quote_plus(keyword)
+        url = f"https://m.1688.com/offer_search/-{encoded}.html?keywords={encoded}"
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Referer": "https://m.1688.com/",
+            "Connection": "keep-alive",
+            "Cache-Control": "max-age=0",
+        }
+
+        self._last_debug["http_fallback_url"] = url
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            resp = await client.get(url, headers=headers)
+
+        if resp.status_code != 200:
+            self._last_debug["http_status"] = resp.status_code
+            logger.warning(f"HTTP 回退返回 {resp.status_code}: {keyword[:40]}")
+            return []
+
+        # 用现有的 _parse 方法从 HTML 中提取商品
+        return self._parse(resp.text, keyword)
 
     # ─── 解析 ─────────────────────────────────────────────
 
