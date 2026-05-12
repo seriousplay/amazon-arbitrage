@@ -1,5 +1,10 @@
 """
 数据模型 — Amazon 和 1688 商品结构（Pydantic v2）
+
+架构说明：
+- MatchResult (Pydantic): 业务逻辑层使用的匹配结果模型，包含 AmazonProduct 和 AlibabaProduct
+- 已删除 models/match.py (SQLAlchemy ORM): 该文件从未被导入使用，内容与 storage.py 中的 ScanTaskRecord 重复
+- ORM 模型统一在 services/storage.py 中定义，通过 mappers.py 与 Pydantic 模型转换
 """
 
 from datetime import datetime

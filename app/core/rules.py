@@ -1,6 +1,7 @@
 """
 选品规则引擎 — 加载/验证/应用自定义筛选规则
 """
+
 import json
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
@@ -17,15 +18,15 @@ class RulesConfig:
     """选品规则配置"""
 
     # ─── Amazon 发现阶段过滤 ──────────────
-    min_price: float = 5.0        # 最低售价 ($)
-    max_price: float = 200.0      # 最高售价 ($)
-    min_rating: float = 3.5       # 最低评分
-    min_reviews: int = 30         # 最低评论数
-    max_bsr_rank: int = 50000     # BSR 排名上限（越小越头部）
+    min_price: float = 5.0  # 最低售价 ($)
+    max_price: float = 200.0  # 最高售价 ($)
+    min_rating: float = 3.5  # 最低评分
+    min_reviews: int = 30  # 最低评论数
+    max_bsr_rank: int = 50000  # BSR 排名上限（越小越头部）
 
     # ─── 1688 匹配阶段过滤 ───────────────
     min_price_ratio: float = 2.0  # Amazon / 1688落地成本 最低倍数（≥2倍价差）
-    min_profit_usd: float = 3.0   # 最低单品利润 ($)
+    min_profit_usd: float = 3.0  # 最低单品利润 ($)
     min_profit_margin: float = 30.0  # 最低利润率 (%)
 
     # ─── 综合评分权重 ────────────────────
@@ -33,7 +34,7 @@ class RulesConfig:
     sales_weight: float = 0.3
     rating_weight: float = 0.2
     competition_weight: float = 0.1
-    min_score: float = 60.0       # 最低推荐分
+    min_score: float = 60.0  # 最低推荐分
 
     # ─── 其他 ────────────────────────────
     max_products_per_scan: int = 30
@@ -136,7 +137,9 @@ class RulesConfig:
             reasons.append(f"利润${result.price_diff_usd:.2f}低于${self.min_profit_usd:.2f}")
 
         if result.estimated_profit_margin < self.min_profit_margin:
-            reasons.append(f"利润率{result.estimated_profit_margin:.0f}%低于{self.min_profit_margin:.0f}%")
+            reasons.append(
+                f"利润率{result.estimated_profit_margin:.0f}%低于{self.min_profit_margin:.0f}%"
+            )
 
         # 价差倍数
         amazon_price = result.amazon.price or 0

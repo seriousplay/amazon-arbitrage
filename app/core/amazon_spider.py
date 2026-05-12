@@ -45,7 +45,10 @@ class AmazonBSRSpider:
         return self._client
 
     async def scrape(
-        self, category: str, max_pages: int = 1, max_products: int = 20,
+        self,
+        category: str,
+        max_pages: int = 1,
+        max_products: int = 20,
         bsr_url: str = None,
     ) -> List[AmazonProduct]:
         """爬取 Amazon BSR 榜单。
@@ -160,10 +163,14 @@ class AmazonBSRSpider:
 
     def _extract_title(self, item) -> str:
         selectors = [
-            "div[class*='Title'] span", "div[class*='title'] span",
-            "span[class*='Title']", "span[class*='title']",
-            "a[class*='Title'] span", "a[class*='title'] span",
-            "h2 a span", "h2 span",
+            "div[class*='Title'] span",
+            "div[class*='title'] span",
+            "span[class*='Title']",
+            "span[class*='title']",
+            "a[class*='Title'] span",
+            "a[class*='title'] span",
+            "h2 a span",
+            "h2 span",
             "div.p13n-sc-truncate-desktop-type2",
             "div.p13n-sc-truncated",
             "div._cDEzb_p13n-sc-css-line-clamp-3_g3dy1",
@@ -183,8 +190,10 @@ class AmazonBSRSpider:
 
     def _extract_rank(self, item) -> int:
         for sel in [
-            "span.zg-bdg-text", "span.zg-bdg-body",
-            "span[class*='rank']", "span[class*='Rank']",
+            "span.zg-bdg-text",
+            "span.zg-bdg-body",
+            "span[class*='rank']",
+            "span[class*='Rank']",
             "span:contains('#')",
         ]:
             el = item.select_one(sel)
@@ -200,7 +209,8 @@ class AmazonBSRSpider:
         for sel in [
             "span.a-price span.a-offscreen",
             "span.a-price",
-            "span[class*='price']", "span[class*='Price']",
+            "span[class*='price']",
+            "span[class*='Price']",
             "span._cDEzb_p13n-sc-price_3mJ9Z",
             "span.a-color-price",
         ]:
@@ -232,9 +242,12 @@ class AmazonBSRSpider:
 
     def _extract_reviews(self, item):
         for sel in [
-            "a.a-size-small", "a.a-link-normal",
-            "span.a-size-small", "span.a-size-base",
-            "span[class*='review']", "a[class*='review']",
+            "a.a-size-small",
+            "a.a-link-normal",
+            "span.a-size-small",
+            "span.a-size-base",
+            "span[class*='review']",
+            "a[class*='review']",
         ]:
             el = item.select_one(sel)
             if el:
@@ -262,15 +275,23 @@ class AmazonBSRSpider:
             if title_el:
                 full_title = title_el.get_text(strip=True)
                 # 只替换标题长度至少为原标题的70%且不超过3倍（防误抓）
-                if full_title and len(full_title) >= len(product.title) * 0.7 and len(full_title) <= len(product.title) * 3:
+                if (
+                    full_title
+                    and len(full_title) >= len(product.title) * 0.7
+                    and len(full_title) <= len(product.title) * 3
+                ):
                     product.title = full_title
 
             # 提取品牌（多种选择器回退）
             brand = None
             for sel in [
-                "#bylineInfo", "a#bylineInfo", "#brand",
-                ".po-brand span.a-size-base", "#productOverview_feature_div .a-row span",
-                "[data-feature-name='brand']", "#detail-bullets b:contains('Brand')",
+                "#bylineInfo",
+                "a#bylineInfo",
+                "#brand",
+                ".po-brand span.a-size-base",
+                "#productOverview_feature_div .a-row span",
+                "[data-feature-name='brand']",
+                "#detail-bullets b:contains('Brand')",
             ]:
                 brand_el = soup.select_one(sel)
                 if brand_el:
@@ -293,8 +314,10 @@ class AmazonBSRSpider:
             # 提取卖家信息（用于卖家集中度分析）
             seller = None
             for sel in [
-                "#sellerInfoTrigger", "#merchant-info",
-                "a[href*='seller=']", "a#bylineInfo",
+                "#sellerInfoTrigger",
+                "#merchant-info",
+                "a[href*='seller=']",
+                "a#bylineInfo",
                 "div#merchant-info",
                 "div.a-box-inner a[href*='seller']",
             ]:
@@ -303,7 +326,12 @@ class AmazonBSRSpider:
                     seller = seller_el.get_text(strip=True)
                     if seller and len(seller) > 2:
                         # 清理多余文本
-                        seller = seller.replace("Visit the", "").replace("Store", "").replace("Brand:", "").strip()
+                        seller = (
+                            seller.replace("Visit the", "")
+                            .replace("Store", "")
+                            .replace("Brand:", "")
+                            .strip()
+                        )
                         if seller:
                             break
             if seller and len(seller) > 1:
@@ -311,6 +339,7 @@ class AmazonBSRSpider:
 
             # 提取首次上架日期（用于新品率分析）
             import re as _re
+
             listing_date = None
             for sel in [
                 "#productDetails_detailBullets_sections1",
@@ -324,8 +353,9 @@ class AmazonBSRSpider:
                 text = container.get_text()
                 # 匹配 "Date First Available: January 1, 2024" 或 "首次上架日期：2024年1月1日"
                 m = _re.search(
-                    r'(?:Date First Available|首次上架日期)[：:]\s*(.+?)(?:\)|$|\n)',
-                    text, _re.IGNORECASE
+                    r"(?:Date First Available|首次上架日期)[：:]\s*(.+?)(?:\)|$|\n)",
+                    text,
+                    _re.IGNORECASE,
                 )
                 if m:
                     listing_date = m.group(1).strip()
@@ -336,9 +366,9 @@ class AmazonBSRSpider:
             # 提取类目路径
             cat_els = soup.select("#wayfinding-breadcrumbs_feature_div li a, #breadCrumb a")
             if cat_els:
-                product.category_path = " > ".join(
-                    el.get_text(strip=True) for el in cat_els
-                ) or None
+                product.category_path = (
+                    " > ".join(el.get_text(strip=True) for el in cat_els) or None
+                )
 
         except Exception as e:
             logger.debug(f"详情页抓取失败 {product.asin}: {e}")
@@ -360,8 +390,11 @@ class AmazonBSRSpider:
         return await asyncio.gather(*tasks)
 
     async def deep_crawl(
-        self, category: str, bsr_url: str = None,
-        max_products: int = 100, enrich_concurrency: int = 10,
+        self,
+        category: str,
+        bsr_url: str = None,
+        max_products: int = 100,
+        enrich_concurrency: int = 10,
     ) -> List[AmazonProduct]:
         """深度爬取 — 获取 Top N BSR 商品并丰富详情（用于集中度分析）
 
@@ -399,21 +432,16 @@ class AmazonBSRSpider:
             await asyncio.sleep(delay)
 
         products = products[:max_products]
-        logger.info(
-            f"deep_crawl: {category} 共获取 {len(products)} 个商品"
-        )
+        logger.info(f"deep_crawl: {category} 共获取 {len(products)} 个商品")
 
         if not products:
             return products
 
         # 详情丰富（高并发）
         logger.info(
-            f"deep_crawl: 开始丰富 {len(products)} 个商品详情"
-            f"（并发={enrich_concurrency}）"
+            f"deep_crawl: 开始丰富 {len(products)} 个商品详情" f"（并发={enrich_concurrency}）"
         )
-        products = await self.enrich_products(
-            products, concurrency=enrich_concurrency
-        )
+        products = await self.enrich_products(products, concurrency=enrich_concurrency)
 
         return products
 

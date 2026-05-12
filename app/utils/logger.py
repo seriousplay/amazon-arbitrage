@@ -6,8 +6,10 @@ from loguru import logger
 import sys
 from pathlib import Path
 
+
 def get_logger(name: str):
     return logger.bind(name=name)
+
 
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
@@ -17,7 +19,7 @@ logger.add(
     sys.stdout,
     format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>: <level>{message}</level>",
     level="INFO",
-    colorize=True
+    colorize=True,
 )
 logger.add(
     log_dir / "app-{time:YYYY-MM-DD}.log",
@@ -25,5 +27,5 @@ logger.add(
     level="DEBUG",
     rotation="1 day",
     retention="7 days",
-    compression="zip"
+    compression="zip",
 )

@@ -19,71 +19,167 @@ TRENDS_CACHE = Path(__file__).parent.parent.parent / "data" / "trends_cache.json
 # 每个条目: (score, direction, change_3m%, peak_months, related_queries)
 BUILTIN_TRENDS_RAW: Dict[str, tuple] = {
     # ── 宠物 ──
-    "pet supplies":           (78, "up",   12, [],    ["dog food","cat toys","pet bed","pet carrier","pet bowls"]),
-    "dog toys":               (72, "up",   8,  [],    ["chew toys","dog rope","squeaky toys","dog ball"]),
-    "dog food":               (60, "flat", 1,  [],    ["dry dog food","puppy food","dog treats"]),
-    "dog bed":                (68, "up",   10, [9,10,11,12], ["large dog bed","orthopedic dog bed","pet sofa"]),
-    "cat litter":             (65, "flat", 2,  [],    ["clumping litter","scoop litter","cat litter box"]),
-    "cat food":               (58, "up",   5,  [],    ["wet cat food","kitten food","cat treats"]),
-    "cat tree":               (55, "up",   7,  [11,12], ["cat tower","cat condo","cat scratching post"]),
-    "pet carrier":            (62, "up",   15, [5,6,7,12], ["dog carrier","cat carrier","travel pet carrier"]),
-    "leash":                  (70, "flat", 2,  [],    ["dog leash","retractable leash","pet harness"]),
-    "pet bowl":               (55, "flat", 1,  [],    ["dog bowl","cat bowl","slow feeder"]),
+    "pet supplies": (
+        78,
+        "up",
+        12,
+        [],
+        ["dog food", "cat toys", "pet bed", "pet carrier", "pet bowls"],
+    ),
+    "dog toys": (72, "up", 8, [], ["chew toys", "dog rope", "squeaky toys", "dog ball"]),
+    "dog food": (60, "flat", 1, [], ["dry dog food", "puppy food", "dog treats"]),
+    "dog bed": (68, "up", 10, [9, 10, 11, 12], ["large dog bed", "orthopedic dog bed", "pet sofa"]),
+    "cat litter": (65, "flat", 2, [], ["clumping litter", "scoop litter", "cat litter box"]),
+    "cat food": (58, "up", 5, [], ["wet cat food", "kitten food", "cat treats"]),
+    "cat tree": (55, "up", 7, [11, 12], ["cat tower", "cat condo", "cat scratching post"]),
+    "pet carrier": (
+        62,
+        "up",
+        15,
+        [5, 6, 7, 12],
+        ["dog carrier", "cat carrier", "travel pet carrier"],
+    ),
+    "leash": (70, "flat", 2, [], ["dog leash", "retractable leash", "pet harness"]),
+    "pet bowl": (55, "flat", 1, [], ["dog bowl", "cat bowl", "slow feeder"]),
     # ── 健身 ──
-    "yoga mat":               (71, "up",   15, [1,9], ["exercise mat","non slip yoga mat","thick yoga mat"]),
-    "dumbbells":              (85, "up",   22, [1,2], ["adjustable dumbbells","dumbbell set","hex dumbbell"]),
-    "resistance bands":       (68, "up",   18, [1,9], ["exercise bands","pull up bands","loop bands"]),
-    "kettlebell":             (69, "up",   15, [],    ["adjustable kettlebell","kettlebell set","cast iron kettlebell"]),
-    "jump rope":              (58, "up",   12, [],    ["speed rope","weighted jump rope","skipping rope"]),
+    "yoga mat": (71, "up", 15, [1, 9], ["exercise mat", "non slip yoga mat", "thick yoga mat"]),
+    "dumbbells": (85, "up", 22, [1, 2], ["adjustable dumbbells", "dumbbell set", "hex dumbbell"]),
+    "resistance bands": (68, "up", 18, [1, 9], ["exercise bands", "pull up bands", "loop bands"]),
+    "kettlebell": (
+        69,
+        "up",
+        15,
+        [],
+        ["adjustable kettlebell", "kettlebell set", "cast iron kettlebell"],
+    ),
+    "jump rope": (58, "up", 12, [], ["speed rope", "weighted jump rope", "skipping rope"]),
     # ── 电子产品 ──
-    "headphones":             (80, "flat", 3,  [],    ["wireless headphones","noise cancelling","bluetooth headphones"]),
-    "wireless earbuds":       (88, "up",   10, [],    ["bluetooth earbuds","true wireless","earbuds charging case"]),
-    "bluetooth speaker":      (76, "flat", 4,  [6,7,8,12], ["portable speaker","waterproof speaker","outdoor speaker"]),
-    "phone case":             (90, "flat", -2, [],    ["silicone case","phone cover","shockproof case"]),
-    "screen protector":       (82, "flat", 1,  [],    ["tempered glass","privacy screen","phone screen protector"]),
-    "charger":                (95, "flat", 0,  [],    ["fast charger","usb c charger","wireless charger"]),
-    "power bank":             (74, "up",   8,  [6,7,8,12], ["portable charger","solar power bank","fast charging power bank"]),
+    "headphones": (
+        80,
+        "flat",
+        3,
+        [],
+        ["wireless headphones", "noise cancelling", "bluetooth headphones"],
+    ),
+    "wireless earbuds": (
+        88,
+        "up",
+        10,
+        [],
+        ["bluetooth earbuds", "true wireless", "earbuds charging case"],
+    ),
+    "bluetooth speaker": (
+        76,
+        "flat",
+        4,
+        [6, 7, 8, 12],
+        ["portable speaker", "waterproof speaker", "outdoor speaker"],
+    ),
+    "phone case": (90, "flat", -2, [], ["silicone case", "phone cover", "shockproof case"]),
+    "screen protector": (
+        82,
+        "flat",
+        1,
+        [],
+        ["tempered glass", "privacy screen", "phone screen protector"],
+    ),
+    "charger": (95, "flat", 0, [], ["fast charger", "usb c charger", "wireless charger"]),
+    "power bank": (
+        74,
+        "up",
+        8,
+        [6, 7, 8, 12],
+        ["portable charger", "solar power bank", "fast charging power bank"],
+    ),
     # ── 厨房 ──
-    "coffee maker":           (62, "flat", 3,  [11,12], ["coffee machine","espresso maker","pour over coffee"]),
-    "air fryer":              (55, "down", -8, [],    ["air fryer oven","basket air fryer","air fryer accessories"]),
-    "water bottle":           (86, "up",   14, [5,6,7,8], ["insulated water bottle","stainless steel","gym water bottle"]),
-    "vacuum":                 (70, "flat", 2,  [],    ["robot vacuum","cordless vacuum","handheld vacuum"]),
+    "coffee maker": (
+        62,
+        "flat",
+        3,
+        [11, 12],
+        ["coffee machine", "espresso maker", "pour over coffee"],
+    ),
+    "air fryer": (
+        55,
+        "down",
+        -8,
+        [],
+        ["air fryer oven", "basket air fryer", "air fryer accessories"],
+    ),
+    "water bottle": (
+        86,
+        "up",
+        14,
+        [5, 6, 7, 8],
+        ["insulated water bottle", "stainless steel", "gym water bottle"],
+    ),
+    "vacuum": (70, "flat", 2, [], ["robot vacuum", "cordless vacuum", "handheld vacuum"]),
     # ── 个人护理 ──
-    "moisturizer":            (77, "up",   6,  [],    ["face moisturizer","body lotion","face cream"]),
-    "serum":                  (73, "up",   11, [],    ["vitamin c serum","hyaluronic acid","retinol serum"]),
-    "sunscreen":              (92, "up",   35, [5,6,7], ["sunblock","face sunscreen","sunscreen spray"]),
+    "moisturizer": (77, "up", 6, [], ["face moisturizer", "body lotion", "face cream"]),
+    "serum": (73, "up", 11, [], ["vitamin c serum", "hyaluronic acid", "retinol serum"]),
+    "sunscreen": (92, "up", 35, [5, 6, 7], ["sunblock", "face sunscreen", "sunscreen spray"]),
     # ── 母婴 ──
-    "diapers":                (88, "flat", 1,  [],    ["baby diapers","diaper pants","newborn diapers"]),
-    "baby wipes":             (75, "flat", 0,  [],    ["water wipes","baby wipes bulk","sensitive wipes"]),
-    "stroller":               (65, "flat", -3, [],    ["baby stroller","travel stroller","twin stroller"]),
+    "diapers": (88, "flat", 1, [], ["baby diapers", "diaper pants", "newborn diapers"]),
+    "baby wipes": (75, "flat", 0, [], ["water wipes", "baby wipes bulk", "sensitive wipes"]),
+    "stroller": (65, "flat", -3, [], ["baby stroller", "travel stroller", "twin stroller"]),
     # ── 运动户外 ──
-    "camping tent":           (71, "up",   30, [3,4,5,6,7,8], ["family tent","backpacking tent","instant tent"]),
-    "sleeping bag":           (63, "up",   25, [3,4,5,6,7,8,9], ["winter sleeping bag","camping sleeping bag","lightweight sleeping bag"]),
-    "hiking backpack":        (60, "up",   18, [3,4,5,6,7,8,9], ["hiking bag","daypack","hydration backpack"]),
-    "fishing rod":            (55, "up",   10, [3,4,5,6,7,8,9], ["fishing pole","spinning rod","telescopic fishing rod"]),
+    "camping tent": (
+        71,
+        "up",
+        30,
+        [3, 4, 5, 6, 7, 8],
+        ["family tent", "backpacking tent", "instant tent"],
+    ),
+    "sleeping bag": (
+        63,
+        "up",
+        25,
+        [3, 4, 5, 6, 7, 8, 9],
+        ["winter sleeping bag", "camping sleeping bag", "lightweight sleeping bag"],
+    ),
+    "hiking backpack": (
+        60,
+        "up",
+        18,
+        [3, 4, 5, 6, 7, 8, 9],
+        ["hiking bag", "daypack", "hydration backpack"],
+    ),
+    "fishing rod": (
+        55,
+        "up",
+        10,
+        [3, 4, 5, 6, 7, 8, 9],
+        ["fishing pole", "spinning rod", "telescopic fishing rod"],
+    ),
     # ── 玩具 ──
-    "lego":                   (95, "flat", 0,  [11,12], ["lego set","building blocks","lego bricks"]),
-    "doll":                   (68, "flat", -2, [],    ["baby doll","dollhouse","fashion doll"]),
-    "puzzle":                 (72, "up",   8,  [11,12], ["jigsaw puzzle","1000 piece puzzle","wooden puzzle"]),
-    "board game":             (66, "up",   5,  [11,12], ["family board game","card game","strategy game"]),
+    "lego": (95, "flat", 0, [11, 12], ["lego set", "building blocks", "lego bricks"]),
+    "doll": (68, "flat", -2, [], ["baby doll", "dollhouse", "fashion doll"]),
+    "puzzle": (72, "up", 8, [11, 12], ["jigsaw puzzle", "1000 piece puzzle", "wooden puzzle"]),
+    "board game": (66, "up", 5, [11, 12], ["family board game", "card game", "strategy game"]),
     # ── 文具 ──
-    "notebook":               (85, "up",   20, [8,9], ["spiral notebook","journal","hardcover notebook"]),
-    "marker":                 (78, "up",   15, [8,9], ["permanent marker","whiteboard marker","colored markers"]),
+    "notebook": (85, "up", 20, [8, 9], ["spiral notebook", "journal", "hardcover notebook"]),
+    "marker": (78, "up", 15, [8, 9], ["permanent marker", "whiteboard marker", "colored markers"]),
     # ── 汽车 ──
-    "wiper blade":            (60, "up",   5,  [],    ["windshield wiper","car wiper blades","rain wiper"]),
-    "car phone mount":        (73, "flat", 2,  [],    ["car phone holder","dashboard mount","vent mount"]),
+    "wiper blade": (60, "up", 5, [], ["windshield wiper", "car wiper blades", "rain wiper"]),
+    "car phone mount": (73, "flat", 2, [], ["car phone holder", "dashboard mount", "vent mount"]),
     # ── 泛品类 ──
-    "toys":                   (82, "up",   10, [11,12], ["kids toys","educational toys","toddler toys"]),
-    "fitness":                (88, "up",   18, [1,9], ["home gym","fitness equipment","exercise equipment"]),
-    "skincare":               (90, "up",   12, [],    ["face care","anti aging","korean skincare"]),
-    "beauty":                 (88, "up",   8,  [],    ["makeup","beauty tools","hair care"]),
-    "kitchen":                (75, "flat", 1,  [],    ["kitchen gadgets","cooking tools","kitchen accessories"]),
-    "home decor":             (70, "up",   5,  [],    ["wall decor","home decoration","living room decor"]),
-    "storage":                (72, "up",   8,  [],    ["storage box","storage bin","shelf organizer"]),
-    "outdoor":                (72, "up",   28, [3,4,5,6,7,8], ["outdoor gear","camping gear","hiking gear"]),
-    "garden":                 (65, "up",   30, [3,4,5,6,7,8], ["garden tools","plant pot","garden hose"]),
-    "office supplies":        (78, "up",   12, [8,9], ["office organizer","desk accessories","stationery"]),
-    "crafts":                 (68, "up",   8,  [],    ["craft supplies","diy crafts","sewing"]),
+    "toys": (82, "up", 10, [11, 12], ["kids toys", "educational toys", "toddler toys"]),
+    "fitness": (88, "up", 18, [1, 9], ["home gym", "fitness equipment", "exercise equipment"]),
+    "skincare": (90, "up", 12, [], ["face care", "anti aging", "korean skincare"]),
+    "beauty": (88, "up", 8, [], ["makeup", "beauty tools", "hair care"]),
+    "kitchen": (75, "flat", 1, [], ["kitchen gadgets", "cooking tools", "kitchen accessories"]),
+    "home decor": (70, "up", 5, [], ["wall decor", "home decoration", "living room decor"]),
+    "storage": (72, "up", 8, [], ["storage box", "storage bin", "shelf organizer"]),
+    "outdoor": (72, "up", 28, [3, 4, 5, 6, 7, 8], ["outdoor gear", "camping gear", "hiking gear"]),
+    "garden": (65, "up", 30, [3, 4, 5, 6, 7, 8], ["garden tools", "plant pot", "garden hose"]),
+    "office supplies": (
+        78,
+        "up",
+        12,
+        [8, 9],
+        ["office organizer", "desk accessories", "stationery"],
+    ),
+    "crafts": (68, "up", 8, [], ["craft supplies", "diy crafts", "sewing"]),
 }
 
 
@@ -115,11 +211,14 @@ class TrendEngine:
 
     def list_all_trends(self) -> List[dict]:
         """列出所有缓存品类趋势（按热度降序）"""
-        return [t.to_dict() for t in sorted(
-            self._cache.categories.values(),
-            key=lambda x: x.current_score,
-            reverse=True,
-        )]
+        return [
+            t.to_dict()
+            for t in sorted(
+                self._cache.categories.values(),
+                key=lambda x: x.current_score,
+                reverse=True,
+            )
+        ]
 
     def refresh_from_defaults(self):
         """用内建数据重建缓存"""
@@ -236,7 +335,10 @@ class TrendEngine:
     # ─── 时序数据 ──────────────────────────────────────
 
     def _generate_time_series(
-        self, current_score: float, direction: str, change_3m: float,
+        self,
+        current_score: float,
+        direction: str,
+        change_3m: float,
     ) -> List[TrendDataPoint]:
         """生成近 6 个月的月度时序数据（从当前值反推）"""
         now = datetime.now()
@@ -262,12 +364,15 @@ class TrendEngine:
             val = value_6m_ago + monthly_delta * i
             # 小幅抖动使曲线更真实
             import math
+
             jitter = math.sin(i * 1.7) * 1.5
-            points.append(TrendDataPoint(
-                date=month_date.strftime("%Y-%m-%d"),
-                value=round(max(0, min(100, val + jitter)), 1),
-                source="builtin",
-            ))
+            points.append(
+                TrendDataPoint(
+                    date=month_date.strftime("%Y-%m-%d"),
+                    value=round(max(0, min(100, val + jitter)), 1),
+                    source="builtin",
+                )
+            )
 
         return points
 
@@ -325,9 +430,7 @@ class TrendEngine:
             self._cache.updated_at = data.get("updated_at", "")
             self._cache.update_count = data.get("update_count", 0)
             for kw, tdata in data.get("categories", {}).items():
-                ts_list = [
-                    TrendDataPoint(**p) for p in tdata.get("time_series", [])
-                ]
+                ts_list = [TrendDataPoint(**p) for p in tdata.get("time_series", [])]
                 self._cache.categories[kw] = CategoryTrend(
                     keyword=tdata.get("keyword", kw),
                     current_score=tdata.get("current_score", 50),
@@ -352,9 +455,7 @@ class TrendEngine:
         """将缓存写入 JSON 文件"""
         try:
             TRENDS_CACHE.parent.mkdir(parents=True, exist_ok=True)
-            TRENDS_CACHE.write_text(
-                json.dumps(self._cache.to_dict(), ensure_ascii=False, indent=2)
-            )
+            TRENDS_CACHE.write_text(json.dumps(self._cache.to_dict(), ensure_ascii=False, indent=2))
         except Exception as e:
             logger.error(f"趋势缓存写入失败: {e}")
 

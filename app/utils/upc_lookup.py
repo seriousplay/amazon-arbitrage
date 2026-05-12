@@ -26,8 +26,8 @@ class UPCLookup:
 
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                      "AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/120.0.0.0 Safari/537.36",
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json",
     }
 
@@ -68,16 +68,16 @@ class UPCLookup:
             resp.raise_for_status()
             data = resp.json()
 
-            if data.get('code') == 'OK' and data.get('total') > 0:
-                item = data['items'][0]
+            if data.get("code") == "OK" and data.get("total") > 0:
+                item = data["items"][0]
                 result = {
-                    'upc': upc,
-                    'title': item.get('title', ''),
-                    'brand': item.get('brand', ''),
-                    'category': item.get('category', ''),
-                    'images': item.get('images', []),
-                    'description': item.get('description', ''),
-                    'source': 'upcitemdb',
+                    "upc": upc,
+                    "title": item.get("title", ""),
+                    "brand": item.get("brand", ""),
+                    "category": item.get("category", ""),
+                    "images": item.get("images", []),
+                    "description": item.get("description", ""),
+                    "source": "upcitemdb",
                 }
                 logger.info(f"✓ UPC查询成功: {upc} → {result['title'][:50]}")
                 return result
@@ -91,7 +91,7 @@ class UPCLookup:
 
     def _validate_upc(self, upc: str) -> bool:
         """验证 UPC 码格式（12位数字，含校验位）"""
-        clean = ''.join(filter(str.isdigit, upc))
+        clean = "".join(filter(str.isdigit, upc))
         if len(clean) not in (12, 13):
             return False
 
@@ -109,10 +109,11 @@ class UPCLookup:
         - 有时在 <span class="a-text-bold">UPC</span> 相邻节点
         """
         from bs4 import BeautifulSoup
-        soup = BeautifulSoup(html, 'html.parser')
+
+        soup = BeautifulSoup(html, "html.parser")
 
         # 查找 UPC 标签
-        upc_labels = soup.find_all(string=re.compile(r'UPC|EAN|Item model number', re.I))
+        upc_labels = soup.find_all(string=re.compile(r"UPC|EAN|Item model number", re.I))
         for label in upc_labels:
             parent = label.parent
             if parent:
@@ -120,7 +121,7 @@ class UPCLookup:
                 sibling = parent.find_next_sibling()
                 if sibling:
                     text = sibling.get_text(strip=True)
-                    if re.match(r'^\d{12,13}$', text):
+                    if re.match(r"^\d{12,13}$", text):
                         logger.info(f"✓ 提取UPC: {text}")
                         return text
 

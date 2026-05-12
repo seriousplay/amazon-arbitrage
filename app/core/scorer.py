@@ -31,9 +31,7 @@ class MatchScorer:
     def cost_mul(self) -> float:
         return self._float_config("COST_MULTIPLIER", "cost_multiplier", default=1.25)
 
-    def score_match(
-        self, amazon: AmazonProduct, alibaba: AlibabaProduct
-    ) -> MatchResult:
+    def score_match(self, amazon: AmazonProduct, alibaba: AlibabaProduct) -> MatchResult:
         """计算单个 Amazon-1688 匹配对的套利评分。"""
         # 1688 价格转为美元并计算落地成本
         rate = self.cny_rate
@@ -92,9 +90,7 @@ class MatchScorer:
         score = min(100.0, max(0.0, round(total, 1)))
 
         # 利润率
-        profit_margin = (
-            (price_diff / amazon_price) * 100 if amazon_price > 0 else 0.0
-        )
+        profit_margin = (price_diff / amazon_price) * 100 if amazon_price > 0 else 0.0
         total_cost = alibaba_cost_usd * alibaba.min_order_qty
 
         # 置信度
@@ -113,14 +109,10 @@ class MatchScorer:
             estimated_profit_margin=round(profit_margin, 1),
             total_cost_usd=round(total_cost, 2),
             confidence=confidence,
-            recommendation=self._get_recommendation(
-                score, price_diff, alibaba.min_order_qty
-            ),
+            recommendation=self._get_recommendation(score, price_diff, alibaba.min_order_qty),
         )
 
-    def _get_recommendation(
-        self, score: float, price_diff: float, moq: int
-    ) -> str:
+    def _get_recommendation(self, score: float, price_diff: float, moq: int) -> str:
         if score >= 80 and price_diff > 0:
             return f"强烈推荐（MOQ: {moq}, 利润空间充足）"
         elif score >= 60 and price_diff > 0:

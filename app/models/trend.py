@@ -9,8 +9,9 @@ from typing import Dict, List, Optional
 @dataclass
 class TrendDataPoint:
     """时序数据点"""
-    date: str            # ISO 日期 (YYYY-MM-DD)
-    value: float         # 热度指数 (0-100)
+
+    date: str  # ISO 日期 (YYYY-MM-DD)
+    value: float  # 热度指数 (0-100)
     source: str = "bsr"  # 数据来源: bsr / google_trends / estimated
 
     def to_dict(self) -> dict:
@@ -20,18 +21,19 @@ class TrendDataPoint:
 @dataclass
 class CategoryTrend:
     """单个品类的完整趋势信号"""
-    keyword: str                        # 匹配到的关键词
-    current_score: float                # 当前热度 (0-100)
-    direction: str                      # 趋势方向: up / flat / down
-    change_1m: float                    # 近 1 个月变化 (%)
-    change_3m: float                    # 近 3 个月变化 (%)
-    change_6m: float                    # 近 6 个月变化 (%)
-    seasonality_peak: List[int]         # 季节性高峰月份 [1-12]
-    related_queries: List[str]          # 相关热门搜索词
-    competitor_count: int = 0           # 该品类下竞品数
-    source: str = "estimated"           # 数据来源
-    confidence: str = "medium"          # 置信度: high / medium / low
-    updated_at: str = ""                # 最后更新时间 ISO
+
+    keyword: str  # 匹配到的关键词
+    current_score: float  # 当前热度 (0-100)
+    direction: str  # 趋势方向: up / flat / down
+    change_1m: float  # 近 1 个月变化 (%)
+    change_3m: float  # 近 3 个月变化 (%)
+    change_6m: float  # 近 6 个月变化 (%)
+    seasonality_peak: List[int]  # 季节性高峰月份 [1-12]
+    related_queries: List[str]  # 相关热门搜索词
+    competitor_count: int = 0  # 该品类下竞品数
+    source: str = "estimated"  # 数据来源
+    confidence: str = "medium"  # 置信度: high / medium / low
+    updated_at: str = ""  # 最后更新时间 ISO
     time_series: List[TrendDataPoint] = field(default_factory=list)  # 近 6 月时序
 
     @property
@@ -70,7 +72,8 @@ class CategoryTrend:
         """是否为强季节性品类"""
         return len(self.seasonality_peak) > 0 and (
             max(self.seasonality_peak, key=self.seasonality_peak.count)
-            if self.seasonality_peak else False
+            if self.seasonality_peak
+            else False
         )
 
     def to_dict(self) -> dict:
@@ -96,7 +99,8 @@ class CategoryTrend:
 @dataclass
 class TrendCache:
     """趋势缓存容器"""
-    updated_at: str = ""                     # 整体刷新时间 ISO
+
+    updated_at: str = ""  # 整体刷新时间 ISO
     categories: Dict[str, CategoryTrend] = field(default_factory=dict)
     update_count: int = 0
 
@@ -105,7 +109,8 @@ class TrendCache:
             "updated_at": self.updated_at,
             "update_count": self.update_count,
             "categories": {
-                k: v.to_dict() for k, v in sorted(
+                k: v.to_dict()
+                for k, v in sorted(
                     self.categories.items(),
                     key=lambda x: x[1].current_score,
                     reverse=True,

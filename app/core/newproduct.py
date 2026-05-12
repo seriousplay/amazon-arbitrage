@@ -16,15 +16,42 @@ logger = get_logger(__name__)
 # ─── 日期解析器 ──────────────────────────────────────────
 
 MONTH_NAMES = {
-    "january": 1, "february": 2, "march": 3, "april": 4,
-    "may": 5, "june": 6, "july": 7, "august": 8,
-    "september": 9, "october": 10, "november": 11, "december": 12,
-    "jan": 1, "feb": 2, "mar": 3, "apr": 4,
-    "jun": 6, "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "may": 5,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
     # 中文月份
-    "1月": 1, "2月": 2, "3月": 3, "4月": 4,
-    "5月": 5, "6月": 6, "7月": 7, "8月": 8,
-    "9月": 9, "10月": 10, "11月": 11, "12月": 12,
+    "1月": 1,
+    "2月": 2,
+    "3月": 3,
+    "4月": 4,
+    "5月": 5,
+    "6月": 6,
+    "7月": 7,
+    "8月": 8,
+    "9月": 9,
+    "10月": 10,
+    "11月": 11,
+    "12月": 12,
 }
 
 
@@ -36,9 +63,7 @@ def parse_listing_date(date_str: Optional[str]) -> Optional[datetime]:
     text = date_str.strip()
 
     # 格式 1: "January 1, 2024" / "Jan 1, 2024"
-    m = re.match(
-        r"([A-Za-z]+)\s+(\d{1,2})[,，]?\s*(\d{4})", text
-    )
+    m = re.match(r"([A-Za-z]+)\s+(\d{1,2})[,，]?\s*(\d{4})", text)
     if m:
         month_name = m.group(1).lower()
         day = int(m.group(2))
@@ -55,7 +80,9 @@ def parse_listing_date(date_str: Optional[str]) -> Optional[datetime]:
     if m:
         try:
             return datetime(
-                int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                int(m.group(1)),
+                int(m.group(2)),
+                int(m.group(3)),
                 tzinfo=timezone.utc,
             )
         except ValueError:
@@ -66,7 +93,9 @@ def parse_listing_date(date_str: Optional[str]) -> Optional[datetime]:
     if m:
         try:
             return datetime(
-                int(m.group(1)), int(m.group(2)), int(m.group(3)),
+                int(m.group(1)),
+                int(m.group(2)),
+                int(m.group(3)),
                 tzinfo=timezone.utc,
             )
         except ValueError:
@@ -118,37 +147,38 @@ from typing import List as ListType
 @dataclass
 class NewProductAnalysis:
     """新品渗透分析结果"""
+
     # 基本信息
-    total_products: int                    # 总分析产品数
-    with_listing_date: int                 # 有上架日期数据的产品数
-    listing_date_coverage: float           # 日期数据覆盖率（%）
+    total_products: int  # 总分析产品数
+    with_listing_date: int  # 有上架日期数据的产品数
+    listing_date_coverage: float  # 日期数据覆盖率（%）
 
     # 新品率
-    new_product_count: int                 # 上架 ≤12 个月的产品数
-    new_product_share: float               # 新品占比（%）
+    new_product_count: int  # 上架 ≤12 个月的产品数
+    new_product_share: float  # 新品占比（%）
 
     # 新品 vs 老品对比
-    new_avg_rating: float                  # 新品平均评分
-    old_avg_rating: float                  # 老品平均评分
-    new_avg_reviews: float                 # 新品平均评论数
-    old_avg_reviews: float                 # 老品平均评论数
-    new_avg_price: float                   # 新品平均售价
-    old_avg_price: float                   # 老品平均售价
-    new_avg_rank: float                    # 新品平均 BSR 排名
-    old_avg_rank: float                    # 老品平均 BSR 排名
+    new_avg_rating: float  # 新品平均评分
+    old_avg_rating: float  # 老品平均评分
+    new_avg_reviews: float  # 新品平均评论数
+    old_avg_reviews: float  # 老品平均评论数
+    new_avg_price: float  # 新品平均售价
+    old_avg_price: float  # 老品平均售价
+    new_avg_rank: float  # 新品平均 BSR 排名
+    old_avg_rank: float  # 老品平均 BSR 排名
 
     # 时间分布
-    avg_listing_age_months: float          # 平均在架月数
-    oldest_listing_date: Optional[str]     # 最早上架日期
-    newest_listing_date: Optional[str]     # 最近上架日期
+    avg_listing_age_months: float  # 平均在架月数
+    oldest_listing_date: Optional[str]  # 最早上架日期
+    newest_listing_date: Optional[str]  # 最近上架日期
 
     # Top 10 分析
-    top_10_new_count: int                  # Top 10 中有几个新品
-    top_10_new_share: float                # Top 10 新品占比（%）
+    top_10_new_count: int  # Top 10 中有几个新品
+    top_10_new_share: float  # Top 10 新品占比（%）
 
     # 新品机会判断
-    new_product_opportunity: str           # 高 / 中 / 低
-    opportunity_reason: str                # 判断理由
+    new_product_opportunity: str  # 高 / 中 / 低
+    opportunity_reason: str  # 判断理由
 
     def to_dict(self) -> dict:
         return {
@@ -192,9 +222,9 @@ class NewProductAnalysis:
 class NewProductAnalyzer:
     """新品渗透分析器"""
 
-    NEW_PRODUCT_MONTHS = 12     # ≤12 个月算新品
-    HIGH_OPPORTUNITY_MIN = 20   # 新品率 ≥20% → 机会高
-    LOW_OPPORTUNITY_MAX = 5     # 新品率 ≤5% → 机会低
+    NEW_PRODUCT_MONTHS = 12  # ≤12 个月算新品
+    HIGH_OPPORTUNITY_MIN = 20  # 新品率 ≥20% → 机会高
+    LOW_OPPORTUNITY_MAX = 5  # 新品率 ≤5% → 机会低
 
     def analyze(self, products: ListType[AmazonProduct]) -> NewProductAnalysis:
         """对一批 Amazon 商品执行新品渗透分析"""
@@ -222,8 +252,12 @@ class NewProductAnalyzer:
         coverage = (with_date / n) * 100
 
         # 分类新品/老品
-        new_products = [(p, dt, age) for p, dt, age in dated_products if age <= self.NEW_PRODUCT_MONTHS]
-        old_products = [(p, dt, age) for p, dt, age in dated_products if age > self.NEW_PRODUCT_MONTHS]
+        new_products = [
+            (p, dt, age) for p, dt, age in dated_products if age <= self.NEW_PRODUCT_MONTHS
+        ]
+        old_products = [
+            (p, dt, age) for p, dt, age in dated_products if age > self.NEW_PRODUCT_MONTHS
+        ]
 
         new_count = len(new_products)
         new_share = (new_count / with_date) * 100
@@ -254,8 +288,10 @@ class NewProductAnalyzer:
         # Top 10 新品占比
         top_10 = products[:10]
         top_10_new = sum(
-            1 for p in top_10
-            if p.listing_date and parse_listing_date(p.listing_date)
+            1
+            for p in top_10
+            if p.listing_date
+            and parse_listing_date(p.listing_date)
             and months_since(parse_listing_date(p.listing_date)) is not None
             and months_since(parse_listing_date(p.listing_date)) <= self.NEW_PRODUCT_MONTHS
         )
@@ -263,8 +299,12 @@ class NewProductAnalyzer:
 
         # 新品机会判断
         opportunity, reason = self._assess_opportunity(
-            new_share, new_avg_reviews, old_avg_reviews,
-            new_avg_rating, old_avg_rating, top_10_new_share,
+            new_share,
+            new_avg_reviews,
+            old_avg_reviews,
+            new_avg_rating,
+            old_avg_rating,
+            top_10_new_share,
         )
 
         return NewProductAnalysis(
@@ -291,8 +331,13 @@ class NewProductAnalyzer:
         )
 
     def _assess_opportunity(
-        self, new_share: float, new_reviews: float, old_reviews: float,
-        new_rating: float, old_rating: float, top10_new_share: float,
+        self,
+        new_share: float,
+        new_reviews: float,
+        old_reviews: float,
+        new_rating: float,
+        old_rating: float,
+        top10_new_share: float,
     ) -> Tuple[str, str]:
         """评估新品进入机会"""
         reasons = []
@@ -329,15 +374,24 @@ class NewProductAnalyzer:
 
     def _empty_result(self) -> NewProductAnalysis:
         return NewProductAnalysis(
-            total_products=0, with_listing_date=0, listing_date_coverage=0,
-            new_product_count=0, new_product_share=0,
-            new_avg_rating=0, old_avg_rating=0,
-            new_avg_reviews=0, old_avg_reviews=0,
-            new_avg_price=0, old_avg_price=0,
-            new_avg_rank=0, old_avg_rank=0,
+            total_products=0,
+            with_listing_date=0,
+            listing_date_coverage=0,
+            new_product_count=0,
+            new_product_share=0,
+            new_avg_rating=0,
+            old_avg_rating=0,
+            new_avg_reviews=0,
+            old_avg_reviews=0,
+            new_avg_price=0,
+            old_avg_price=0,
+            new_avg_rank=0,
+            old_avg_rank=0,
             avg_listing_age_months=0,
-            oldest_listing_date=None, newest_listing_date=None,
-            top_10_new_count=0, top_10_new_share=0,
+            oldest_listing_date=None,
+            newest_listing_date=None,
+            top_10_new_count=0,
+            top_10_new_share=0,
             new_product_opportunity="数据不足",
             opportunity_reason="无法获取上架日期数据",
         )

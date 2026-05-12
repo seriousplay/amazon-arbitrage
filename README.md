@@ -79,42 +79,121 @@ docker-compose up -d
 
 ```
 amazon-pet-arbitrage/
-├── app/                    # 核心应用
-│   ├── main.py            # FastAPI 入口
-│   ├── config.py          # 配置管理
-│   ├── core/              # 业务逻辑
-│   │   ├── scanner.py     # 扫描引擎
-│   │   ├── amazon_spider.py
-│   │   ├── alibaba_matcher.py
-│   │   └── scorer.py
-│   ├── services/          # 服务层
-│   │   ├── storage.py     # 数据库
-│   │   └── browser.py     # 浏览器池
-│   └── api/               # REST API
-├── infrastructure/        # 部署配置
+├── app/                          # 核心应用
+│   ├── main.py                  # FastAPI 入口
+│   ├── config.py                # 配置管理
+│   ├── core/                    # 业务逻辑层
+│   │   ├── scanner/             # 扫描工作流（模块化）
+│   │   │   ├── __init__.py
+│   │   │   ├── engine.py        # ScanOrchestrator
+│   │   │   ├── task.py          # TaskManager
+│   │   │   ├── discovery.py     # DiscoveryService
+│   │   │   ├── matching.py      # MatchingService
+│   │   │   ├── review.py        # ReviewWorkflow
+│   │   │   ├── analysis.py      # AnalysisService
+│   │   │   └── models.py        # 遗留类型定义
+│   │   ├── alibaba/             # 1688 匹配（模块化）
+│   │   │   ├── __init__.py
+│   │   │   ├── matcher.py       # AlibabaMatcher Facade
+│   │   │   ├── browser.py       # BrowserController
+│   │   │   ├── captcha.py       # CaptchaSolver
+│   │   │   └── search.py        # SearchHandler
+│   │   ├── matcher/             # 模糊匹配（模块化）
+│   │   │   ├── __init__.py
+│   │   │   ├── matcher.py       # FuzzyMatcher
+│   │   │   ├── synonyms.py      # SynonymManager
+│   │   │   └── normalizer.py    # TextNormalizer
+│   │   ├── scanner.py           # 扫描引擎（Legacy Facade）
+│   │   ├── amazon_spider.py     # Amazon BSR 爬虫
+│   │   ├── alibaba_matcher.py   # 1688 匹配器（Legacy Facade）
+│   │   ├── scorer.py            # 匹配评分引擎
+│   │   ├── rules.py             # 过滤规则
+│   │   └── ...                  # 其他分析模块
+│   ├── services/                # 服务层
+│   │   ├── storage.py           # 数据库操作
+│   │   └── browser_pool.py      # 浏览器池
+│   ├── models/                  # 数据模型
+│   │   ├── product.py           # Pydantic 模型
+│   │   ├── mappers.py           # Pydantic ↔ ORM 转换
+│   │   └── ...                  # 其他模型
+│   ├── utils/                   # 工具模块
+│   │   ├── translator.py        # 英中翻译
+│   │   ├── category_mapper.py   # 类目映射
+│   │   ├── fuzzy_matcher.py     # 模糊匹配
+│   │   ├── slider_captcha.py    # 滑块验证码
+│   │   └── ...                  # 其他工具
+│   ├── api/v1/endpoints/        # REST API 路由
+│   └── workers/                 # 后台任务
+├── data/                        # 数据文件
+│   ├── categories/              # 类目映射（355 条）
+│   ├── translations/            # 翻译词表（438 条）
+│   ├── matcher/                 # 匹配词典
+│   └── cookies/                 # 1688 cookies
+├── tests/                       # 测试套件
+│   ├── unit/                    # 单元测试（128 tests）
+│   └── integration/             # 集成测试（19 tests）
+├── infrastructure/              # 部署配置
 │   ├── docker/
 │   └── nginx/
-├── tests/                 # 测试
-├── docs/                  # 文档
-└── scripts/               # 部署脚本
+├── .github/workflows/           # CI/CD Pipeline
+├── pyproject.toml               # 项目配置
+├── .pre-commit-config.yaml      # Pre-commit hooks
+├── DEVELOPMENT.md               # 开发指南
+└── README.md                    # 本文档
 ```
 
 ## 🛠️ 开发指南
 
+### 代码质量工具
+
+本项目使用现代化的代码质量工具链：
+
+- **Black** - 自动代码格式化
+- **Ruff** - 快速代码检查（替代 flake8/isort）
+- **Mypy** - 静态类型检查
+- **Pytest** - 测试框架
+- **pre-commit** - Git hooks 自动化
+
+详细使用说明请参见 [DEVELOPMENT.md](DEVELOPMENT.md)
+
+### 快速开始
+
+```bash
+# 安装 pre-commit hooks
+pip install pre-commit
+pre-commit install
+
+# 运行所有检查
+pre-commit run --all-files
+
+# 运行测试
+pytest
+
+# 生成覆盖率报告
+pytest --cov=app --cov-report=html
+```
+
 ### 添加新的类目
+
 编辑 `app/config.py` 中的 `CATEGORIES` 列表
 
 ### 调整评分权重
-修改 `MatchScorer` 类中的权重系数
 
-### 自定义滑块策略
-在 `app/services/captcha_solver.py` 中添加新的检测算法
+修改 `MatchScorer` 类中的权重系数
 
 ## 📈 监控与日志
 
 - 日志文件：`logs/app.log`
 - 数据库：`data/arbitrage.db`
 - 调试截图：`data/temp/debug_*.png`
+
+## ✅ 测试状态
+
+- **总测试数**：147 tests
+- **单元测试**：128 tests ✅
+- **集成测试**：19 tests ✅
+- **测试覆盖率**：26% overall, 70%+ for new modules
+- **CI/CD**：GitHub Actions ✅
 
 ## ⚠️ 注意事项
 

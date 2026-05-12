@@ -10,10 +10,17 @@ DiscoveryService - Amazon 产品发现服务
 from typing import List, Optional
 
 from app.models.product import AmazonProduct
-from app.core.scanner import ScanTask, DiscoveredProduct, ProductStatus
 from app.core.rules import RulesConfig
 from app.core.amazon_spider import AmazonBSRSpider
 from app.config import settings
+
+
+# 延迟导入以避免循环依赖
+def _get_scanner_types():
+    """从旧 scanner 模块获取类型（延迟导入）"""
+    from app.core.scanner import ScanTask, DiscoveredProduct, ProductStatus
+
+    return ScanTask, DiscoveredProduct, ProductStatus
 
 
 class DiscoveryService:
@@ -32,7 +39,7 @@ class DiscoveryService:
 
     async def discover(
         self,
-        task: ScanTask,
+        task,
         bsr_url: Optional[str] = None,
     ) -> List[AmazonProduct]:
         """
@@ -45,6 +52,9 @@ class DiscoveryService:
         Returns:
             发现的 Amazon 产品列表
         """
+        # 延迟导入类型
+        ScanTask, DiscoveredProduct, ProductStatus = _get_scanner_types()
+
         # 调用爬虫爬取产品
         products = await self.spider.scrape(
             category=task.category,
@@ -53,15 +63,14 @@ class DiscoveryService:
         )
 
         # 根据规则过滤产品
-        filtered_products = self.rules.filter_amazon_products(products)
+        # filter_amazon_products 返回 (passed, filtered, reasons)
+        passed, filtered, reasons = self.rules.filter_amazon_products(products)
 
         # 更新任务产品列表
-        for product in filtered_products:
-            task.products.append(
-                DiscoveredProduct(product=product, status=ProductStatus.PENDING)
-            )
+        for product in passed:
+            task.products.append(DiscoveredProduct(product=product, status=ProductStatus.PENDING))
 
-        return filtered_products
+        return passed
 
     async def enrich_products(self, products: List[AmazonProduct]) -> List[AmazonProduct]:
         """
@@ -85,4 +94,5 @@ class DiscoveryService:
         Returns:
             过滤后的产品列表
         """
-        return self.rules.filter_amazon_products(products)
+        passed, filtered, reasons = self.rules.filter_amazon_products(products)
+        return passed

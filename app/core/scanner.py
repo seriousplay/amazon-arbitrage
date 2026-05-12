@@ -34,23 +34,24 @@ CATEGORIES_FILE = Path(__file__).parent.parent.parent / "data" / "categories.jso
 
 
 class ProductStatus(str, Enum):
-    PENDING = "pending"       # 已发现，待审核
-    APPROVED = "approved"     # 已通过审核，待匹配
-    REJECTED = "rejected"     # 已拒绝
-    MATCHED = "matched"       # 已匹配成功
-    NO_MATCH = "no_match"     # 匹配无结果
+    PENDING = "pending"  # 已发现，待审核
+    APPROVED = "approved"  # 已通过审核，待匹配
+    REJECTED = "rejected"  # 已拒绝
+    MATCHED = "matched"  # 已匹配成功
+    NO_MATCH = "no_match"  # 匹配无结果
 
 
 class Phase(str, Enum):
-    DISCOVER = "discover"     # 正在爬取 Amazon
-    REVIEW = "review"         # 等待用户审核
-    MATCHING = "matching"     # 正在匹配 1688
-    DONE = "done"             # 全部完成
+    DISCOVER = "discover"  # 正在爬取 Amazon
+    REVIEW = "review"  # 等待用户审核
+    MATCHING = "matching"  # 正在匹配 1688
+    DONE = "done"  # 全部完成
 
 
 @dataclass
 class DiscoveredProduct:
     """发现的 Amazon 商品 + 审核状态"""
+
     product: AmazonProduct
     status: ProductStatus = ProductStatus.PENDING
     match_result: Optional[MatchResult] = None
@@ -166,7 +167,10 @@ class ScanEngine:
     # ─── 阶段 1: Amazon 发现（不含1688匹配）────────
 
     async def start_discover_only(
-        self, category: str, max_products: int = 15, bsr_url: str = None,
+        self,
+        category: str,
+        max_products: int = 15,
+        bsr_url: str = None,
         callback: Optional[Callable] = None,
     ) -> str:
         """仅执行 Amazon 发现：爬取 + 规则过滤 + 爆款初评（评分不含利润维度）"""
@@ -194,8 +198,10 @@ class ScanEngine:
                 await self._notify(callback, task)
 
                 products = await self.amazon_spider.scrape(
-                    category=task.category, max_pages=min(2, self.config.AMAZON_BSR_PAGES),
-                    max_products=task.max_products, bsr_url=bsr_url,
+                    category=task.category,
+                    max_pages=min(2, self.config.AMAZON_BSR_PAGES),
+                    max_products=task.max_products,
+                    bsr_url=bsr_url,
                 )
                 task.current_step = f"📄 已发现 {len(products)} 个商品，正在抓取详情页..."
                 task.progress = 0.3
@@ -205,7 +211,9 @@ class ScanEngine:
             task.current_step = f"📊 规则过滤中..."
             task.progress = 0.6
             passed, filtered, reasons = self.rules.filter_amazon_products(products)
-            task.products = [DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in passed]
+            task.products = [
+                DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in passed
+            ]
             task.amazon_count = len(passed)
 
             # 初步评分（不含1688利润数据）
@@ -306,8 +314,10 @@ class ScanEngine:
             await self._notify(callback, task)
 
             products = await self.amazon_spider.scrape(
-                category=task.category, max_pages=min(2, self.config.AMAZON_BSR_PAGES),
-                max_products=task.max_products, bsr_url=bsr_url,
+                category=task.category,
+                max_pages=min(2, self.config.AMAZON_BSR_PAGES),
+                max_products=task.max_products,
+                bsr_url=bsr_url,
             )
             task.current_step = f"📄 已发现 {len(products)} 个商品，正在抓取详情页..."
             task.progress = 0.15
@@ -322,7 +332,9 @@ class ScanEngine:
                 task.current_step = "规则过滤后无商品通过"
                 task.completed_at = datetime.now()
                 return
-            task.products = [DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in passed]
+            task.products = [
+                DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in passed
+            ]
             task.amazon_count = len(passed)
 
             task.current_step = f"✅ {len(passed)} 个商品通过规则，准备匹配 1688..."
@@ -338,20 +350,26 @@ class ScanEngine:
             task.match_count = len(task.results)
 
             # Step 3: 标记高价值
-            high_value = [r for r in task.results if r.estimated_profit_margin >= self.rules.min_profit_margin]
+            high_value = [
+                r for r in task.results if r.estimated_profit_margin >= self.rules.min_profit_margin
+            ]
             for r in task.results:
                 dp = next((d for d in task.products if d.product.asin == r.amazon.asin), None)
                 if dp:
                     dp.status = ProductStatus.MATCHED
                     dp.match_result = r
                 if r in high_value:
-                    r.recommendation = f"🔥 高价值 ({r.estimated_profit_margin:.0f}%利润率) " + r.recommendation
+                    r.recommendation = (
+                        f"🔥 高价值 ({r.estimated_profit_margin:.0f}%利润率) " + r.recommendation
+                    )
 
             # 保存
             if task.results:
                 await self.storage.save_scan_task(
-                    task_id=task.task_id, category=task.category,
-                    amazon_count=len(passed), match_count=len(task.results),
+                    task_id=task.task_id,
+                    category=task.category,
+                    amazon_count=len(passed),
+                    match_count=len(task.results),
                     results=[r.model_dump() for r in task.results],
                 )
 
@@ -363,13 +381,19 @@ class ScanEngine:
             match_map = {r.amazon.asin: r for r in task.results}
             breakout_results = self.breakout_scorer.score_batch(passed, match_map)
             task.breakout_results = breakout_results
-            s_count = sum(1 for r in breakout_results if r["breakout_score"]["grade"] in ("S级爆款", "A级潜力"))
+            s_count = sum(
+                1
+                for r in breakout_results
+                if r["breakout_score"]["grade"] in ("S级爆款", "A级潜力")
+            )
             a_count = sum(1 for r in breakout_results if r["breakout_score"]["grade"] == "A级潜力")
 
             task.phase = Phase.DONE
             task.status = "completed"
             task.progress = 1.0
-            task.current_step = f"完成: {len(task.results)} 匹配, {len(high_value)} 高价值, {s_count} S/A级爆款"
+            task.current_step = (
+                f"完成: {len(task.results)} 匹配, {len(high_value)} 高价值, {s_count} S/A级爆款"
+            )
             task.completed_at = datetime.now()
         except Exception as e:
             logger.error(f"[{task.task_id}] 一键扫描失败: {e}", exc_info=True)
@@ -403,7 +427,9 @@ class ScanEngine:
         return task_id
 
     async def _run_deep_discover(
-        self, task: ScanTask, bsr_url: str = None,
+        self,
+        task: ScanTask,
+        bsr_url: str = None,
         callback: Optional[Callable] = None,
     ):
         try:
@@ -416,7 +442,8 @@ class ScanEngine:
             await self._notify(callback, task)
 
             products = await self.amazon_spider.deep_crawl(
-                category=task.category, bsr_url=bsr_url,
+                category=task.category,
+                bsr_url=bsr_url,
                 max_products=task.max_products,
             )
 
@@ -428,19 +455,17 @@ class ScanEngine:
                 return
 
             task.products = [
-                DiscoveredProduct(product=p, status=ProductStatus.APPROVED)
-                for p in products
+                DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in products
             ]
 
-            task.current_step = (
-                f"已获取 {len(products)} 个商品，正在进行集中度分析..."
-            )
+            task.current_step = f"已获取 {len(products)} 个商品，正在进行集中度分析..."
             task.progress = 0.6
             await self._notify(callback, task)
 
             # Step 2: 品牌集中度 + 价格区间分析
             concentration = self.concentration_analyzer.analyze(
-                products=products, category=task.category,
+                products=products,
+                category=task.category,
             )
             task.concentration_result = concentration.to_dict()
 
@@ -482,9 +507,7 @@ class ScanEngine:
             )
 
         except Exception as e:
-            logger.error(
-                f"[{task.task_id}] 深度分析失败: {e}", exc_info=True
-            )
+            logger.error(f"[{task.task_id}] 深度分析失败: {e}", exc_info=True)
             task.status = "failed"
             task.error = str(e)
         finally:
@@ -500,20 +523,24 @@ class ScanEngine:
     ) -> str:
         """启动差评分析：爬取评论 → 关键词聚类 → 改进建议"""
         import uuid as _uuid
+
         task_id = str(_uuid.uuid4())[:8]
 
-        asyncio.create_task(
-            self._run_review_analysis(task_id, asins, category, callback)
-        )
+        asyncio.create_task(self._run_review_analysis(task_id, asins, category, callback))
         return task_id
 
     async def _run_review_analysis(
-        self, task_id: str, asins: List[str],
-        category: str, callback: Optional[Callable] = None,
+        self,
+        task_id: str,
+        asins: List[str],
+        category: str,
+        callback: Optional[Callable] = None,
     ):
         try:
             if callback:
-                await callback({"task_id": task_id, "current_step": "正在爬取差评...", "progress": 0.1})
+                await callback(
+                    {"task_id": task_id, "current_step": "正在爬取差评...", "progress": 0.1}
+                )
 
             # 爬取差评
             self._review_results[task_id] = {"status": "running", "progress": 0.1}
@@ -527,7 +554,9 @@ class ScanEngine:
             )
 
             if callback:
-                await callback({"task_id": task_id, "current_step": "正在分析差评...", "progress": 0.6})
+                await callback(
+                    {"task_id": task_id, "current_step": "正在分析差评...", "progress": 0.6}
+                )
 
             self._review_results[task_id] = {"status": "analyzing", "progress": 0.6}
 
@@ -556,7 +585,8 @@ class ScanEngine:
                 return
 
             batch_result = self.review_analyzer.analyze_batch(
-                products_reviews, category=category,
+                products_reviews,
+                category=category,
             )
             self._review_results[task_id] = {
                 "status": "completed",
@@ -575,7 +605,9 @@ class ScanEngine:
         except Exception as e:
             logger.error(f"差评分析失败: {e}", exc_info=True)
             self._review_results[task_id] = {
-                "status": "failed", "error": str(e), "result": None,
+                "status": "failed",
+                "error": str(e),
+                "result": None,
             }
 
     def get_review_analysis(self, task_id: str) -> Optional[dict]:
@@ -648,16 +680,13 @@ class ScanEngine:
 
             # 应用规则过滤
             passed, filtered, reasons = self.rules.filter_amazon_products(products)
-            logger.info(
-                f"[{task.task_id}] 规则过滤: {len(passed)} 通过 / {len(filtered)} 被过滤"
-            )
+            logger.info(f"[{task.task_id}] 规则过滤: {len(passed)} 通过 / {len(filtered)} 被过滤")
             for p in filtered[:5]:  # 只记录前5个
                 logger.debug(f"  过滤 {p.asin}: {reasons.get(p.asin, [])}")
 
             # 通过的商品自动标记为已审核
             task.products = [
-                DiscoveredProduct(product=p, status=ProductStatus.APPROVED)
-                for p in passed
+                DiscoveredProduct(product=p, status=ProductStatus.APPROVED) for p in passed
             ]
             task.progress = 1.0
 
@@ -675,9 +704,7 @@ class ScanEngine:
             task.status = "completed"
             task.current_step = f"发现 {len(products)} 个，规则通过 {len(passed)} 个"
             task.completed_at = datetime.now()
-            logger.info(
-                f"[{task.task_id}] ✓ 发现 {len(task.products)} 个商品，进入审核"
-            )
+            logger.info(f"[{task.task_id}] ✓ 发现 {len(task.products)} 个商品，进入审核")
         except Exception as e:
             logger.error(f"[{task.task_id}] 发现失败: {e}", exc_info=True)
             task.status = "failed"
@@ -709,9 +736,7 @@ class ScanEngine:
 
     # ─── Phase 3: 匹配 ─────────────────────────────────
 
-    async def start_matching(
-        self, task_id: str, callback: Optional[Callable] = None
-    ) -> bool:
+    async def start_matching(self, task_id: str, callback: Optional[Callable] = None) -> bool:
         """启动匹配阶段：对已审核通过的商品搜索 1688"""
         task = self._tasks.get(task_id)
         if not task or task.phase != Phase.REVIEW:
@@ -756,16 +781,12 @@ class ScanEngine:
                     await self._notify(callback, task)
 
                     if ali_list:
-                        result = self.scorer.score_match(
-                            amazon=amz, alibaba=ali_list[0]
-                        )
+                        result = self.scorer.score_match(amazon=amz, alibaba=ali_list[0])
                         for dp in task.products:
                             if dp.product.asin == amz.asin:
                                 dp.status = ProductStatus.MATCHED
                                 dp.match_result = result
-                                logger.info(
-                                    f"[{task.task_id}] ✓ {amz.asin}: {result.score:.1f}"
-                                )
+                                logger.info(f"[{task.task_id}] ✓ {amz.asin}: {result.score:.1f}")
                                 return
                     # 无匹配
                     for dp in task.products:
@@ -780,9 +801,7 @@ class ScanEngine:
             task.progress = 1.0
             task.current_step = f"完成: {task.matched_count} 匹配 / {task.approved_count + task.matched_count + sum(1 for p in task.products if p.status == ProductStatus.NO_MATCH)} 已处理"
             task.completed_at = datetime.now()
-            logger.info(
-                f"[{task.task_id}] ✓ 匹配完成: {task.matched_count} 个结果"
-            )
+            logger.info(f"[{task.task_id}] ✓ 匹配完成: {task.matched_count} 个结果")
 
             # 保存到数据库
             matched = [
@@ -822,13 +841,15 @@ class ScanEngine:
         products = await self.alibaba_matcher.search_and_match(keyword)
         return [p.model_dump() for p in products]
 
-    async def _match_parallel(self, task: ScanTask, products: List[AmazonProduct], callback) -> List[MatchResult]:
+    async def _match_parallel(
+        self, task: ScanTask, products: List[AmazonProduct], callback
+    ) -> List[MatchResult]:
         """并行匹配 Amazon 商品到 1688 供应商"""
         if not products:
             return []
 
         semaphore = asyncio.Semaphore(3)
-        
+
         async def match_one(product: AmazonProduct) -> Optional[MatchResult]:
             async with semaphore:
                 try:
@@ -836,7 +857,7 @@ class ScanEngine:
                         asin=product.asin,
                         title=product.title,
                         category=product.category or "Pet Supplies",
-                        price=product.price
+                        price=product.price,
                     )
                     if not supplier:
                         return None
@@ -844,12 +865,13 @@ class ScanEngine:
                 except Exception as e:
                     logger.error(f"匹配失败 {product.asin}: {e}")
                     return None
-        
+
         tasks = [match_one(p) for p in products]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         valid = [r for r in results if r is not None and not isinstance(r, Exception)]
         logger.info(f"匹配完成: {len(valid)}/{len(products)} 成功")
         return valid
+
     async def cancel_all(self) -> int:
         """取消所有正在运行的任务"""
         count = 0

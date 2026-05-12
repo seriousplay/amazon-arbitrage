@@ -2,7 +2,10 @@
 系统状态 API
 """
 
+import os
 from fastapi import APIRouter, Request
+
+import psutil
 
 router = APIRouter(prefix="/status", tags=["系统状态"])
 
@@ -18,15 +21,15 @@ async def list_tasks(request: Request):
                 {
                     "task_id": task.task_id,
                     "category": task.category,
-                    "phase": task.phase.value if hasattr(task, 'phase') else "unknown",
+                    "phase": task.phase.value if hasattr(task, "phase") else "unknown",
                     "status": task.status,
                     "progress": task.progress,
                     "current_step": task.current_step,
-                    "total": len(task.products) if hasattr(task, 'products') else 0,
-                    "approved": task.approved_count if hasattr(task, 'approved_count') else 0,
-                    "matched": task.matched_count if hasattr(task, 'matched_count') else 0,
-                    "amazon": task.amazon_count if hasattr(task, 'amazon_count') else 0,
-                    "matches": task.match_count if hasattr(task, 'match_count') else 0,
+                    "total": len(task.products) if hasattr(task, "products") else 0,
+                    "approved": task.approved_count if hasattr(task, "approved_count") else 0,
+                    "matched": task.matched_count if hasattr(task, "matched_count") else 0,
+                    "amazon": task.amazon_count if hasattr(task, "amazon_count") else 0,
+                    "matches": task.match_count if hasattr(task, "match_count") else 0,
                 }
             )
     return {"tasks": tasks, "total": len(tasks)}
@@ -56,9 +59,6 @@ async def login_status(request: Request):
 @router.get("/system")
 async def system_status():
     """系统资源状态"""
-    import os
-    import psutil
-
     process = psutil.Process(os.getpid())
     mem = psutil.virtual_memory()
     return {
@@ -69,7 +69,6 @@ async def system_status():
             "available_mb": round(mem.available / 1024**2, 1),
         },
         "disk_usage": {
-            k: round(v / 1024**3, 1)
-            for k, v in psutil.disk_usage("/")._asdict().items()
+            k: round(v / 1024**3, 1) for k, v in psutil.disk_usage("/")._asdict().items()
         },
     }

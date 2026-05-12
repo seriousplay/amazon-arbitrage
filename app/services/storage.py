@@ -19,6 +19,7 @@ Base = declarative_base()
 
 class ScanTaskRecord(Base):
     """扫描任务记录表"""
+
     __tablename__ = "scan_tasks"
 
     id = Column(String, primary_key=True)
@@ -78,12 +79,15 @@ class StorageService:
             )
             session.add(record)
             await session.commit()
-        logger.info(f"✓ 保存任务: {task_id} ({match_count} 个匹配, {len(json.dumps(results))} 字节)")
+        logger.info(
+            f"✓ 保存任务: {task_id} ({match_count} 个匹配, {len(json.dumps(results))} 字节)"
+        )
 
     async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """获取任务详情（含匹配结果）"""
         async with self.SessionLocal() as session:
             from sqlalchemy import select
+
             stmt = select(ScanTaskRecord).where(ScanTaskRecord.id == task_id)
             result = await session.execute(stmt)
             record = result.scalar_one_or_none()
@@ -112,11 +116,8 @@ class StorageService:
         """获取最近的任务列表"""
         async with self.SessionLocal() as session:
             from sqlalchemy import select, desc
-            stmt = (
-                select(ScanTaskRecord)
-                .order_by(desc(ScanTaskRecord.created_at))
-                .limit(limit)
-            )
+
+            stmt = select(ScanTaskRecord).order_by(desc(ScanTaskRecord.created_at)).limit(limit)
             result = await session.execute(stmt)
             records = result.scalars().all()
             return [

@@ -20,6 +20,11 @@ data/
 !data/categories.json
 !data/rule_presets.json
 !data/*.db
+!data/translations/
+!data/categories/
+!data/matcher/
+
+# 日志
 logs/
 *.log
 
@@ -38,3 +43,19 @@ Thumbs.db
 # 临时文件
 *.tmp
 *.bak
+
+# 测试覆盖率
+.coverage
+coverage.xml
+coverage.json
+htmlcov/
+.pytest_cache/
+
+# 编辑器
+.vscode/
+.idea/
+
+# 项目特定
+profit_sum.xlsx
+*.xlsx
+!data/*.xlsx

@@ -1,13 +1,14 @@
-"""核心业务逻辑包"""
-from .scanner import ScanEngine, ScanTask
+"""核心业务逻辑包
+
+架构说明：
+- 所有核心类直接导入，无循环依赖
+- AlibabaMatcher 由 scanner.py 直接导入，无需延迟加载
+- 已删除 models/match.py (SQLAlchemy ORM)，所有 ORM 模型在 services/storage.py 中定义
+"""
+
+from .alibaba_matcher import AlibabaMatcher
 from .amazon_spider import AmazonBSRSpider
+from .scanner import ScanEngine, ScanTask
 from .scorer import MatchScorer
 
-# AlibabaMatcher 需单独导入（避免循环依赖）
-def __getattr__(name):
-    if name == "AlibabaMatcher":
-        from .alibaba_matcher import AlibabaMatcher
-        return AlibabaMatcher
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-__all__ = ["ScanEngine", "ScanTask", "AmazonBSRSpider", "MatchScorer"]
+__all__ = ["ScanEngine", "ScanTask", "AmazonBSRSpider", "MatchScorer", "AlibabaMatcher"]

@@ -26,19 +26,19 @@ class MarketConcentrationAnalyzer:
     """市场集中度分析器"""
 
     # HHI 阈值（针对 Top 100 市场）
-    HHI_HIGH = 2500      # ≥2500 → 高集中度（寡占）
-    HHI_MODERATE = 1500   # 1500-2500 → 中集中度
+    HHI_HIGH = 2500  # ≥2500 → 高集中度（寡占）
+    HHI_MODERATE = 1500  # 1500-2500 → 中集中度
     # CR3 阈值（辅助判断）
-    CR3_HIGH = 60         # ≥60% → 高集中度
-    CR3_LOW = 30          # ≤30% → 低集中度
+    CR3_HIGH = 60  # ≥60% → 高集中度
+    CR3_LOW = 30  # ≤30% → 低集中度
 
     # 价格区间粒度（按不同价格段自适应）
     PRICE_BUCKET_SIZE = {
-        (0, 10): 2,        # $0-10: 每 $2 一个区间
-        (10, 25): 5,       # $10-25: 每 $5
-        (25, 50): 10,      # $25-50: 每 $10
-        (50, 100): 20,     # $50-100: 每 $20
-        (100, 500): 50,    # $100+: 每 $50
+        (0, 10): 2,  # $0-10: 每 $2 一个区间
+        (10, 25): 5,  # $10-25: 每 $5
+        (25, 50): 10,  # $25-50: 每 $10
+        (50, 100): 20,  # $50-100: 每 $20
+        (100, 500): 50,  # $100+: 每 $50
     }
 
     def __init__(self):
@@ -60,9 +60,7 @@ class MarketConcentrationAnalyzer:
 
         self._products = products
         self._brand_counts = Counter(p.brand or "未知品牌" for p in products)
-        self._prices = [
-            p.price for p in products if p.price is not None and p.price > 0
-        ]
+        self._prices = [p.price for p in products if p.price is not None and p.price > 0]
 
         logger.info(
             f"集中度分析: 类别={category}, "
@@ -92,7 +90,9 @@ class MarketConcentrationAnalyzer:
             price_analysis=price_analysis,
             product_diversity_note=diversity_note,
             overall_verdict=verdict,
-            scraped_at=products[0].scraped_at.isoformat() if hasattr(products[0], "scraped_at") else "",
+            scraped_at=(
+                products[0].scraped_at.isoformat() if hasattr(products[0], "scraped_at") else ""
+            ),
         )
 
         logger.info(f"集中度分析完成: {verdict}")
@@ -104,9 +104,14 @@ class MarketConcentrationAnalyzer:
         """分析品牌集中度（CR3 / CR5 / CR10 / HHI）"""
         if not self._brand_counts:
             return BrandConcentration(
-                brands=[], top_3_share=0, top_5_share=0,
-                top_10_share=0, total_brands=0,
-                unique_brands_in_top_10=0, hhi=0, level="数据不足",
+                brands=[],
+                top_3_share=0,
+                top_5_share=0,
+                top_10_share=0,
+                total_brands=0,
+                unique_brands_in_top_10=0,
+                hhi=0,
+                level="数据不足",
             )
 
         total = sum(self._brand_counts.values())
@@ -115,27 +120,33 @@ class MarketConcentrationAnalyzer:
 
         brand_shares = []
         for brand, count in sorted_brands:
-            products_of_brand = [
-                p for p in self._products if (p.brand or "未知品牌") == brand
-            ]
-            avg_price = statistics.mean(
-                [p.price for p in products_of_brand if p.price]
-            ) if any(p.price for p in products_of_brand) else 0
-            avg_rating = statistics.mean(
-                [p.rating for p in products_of_brand if p.rating]
-            ) if any(p.rating for p in products_of_brand) else 0
-            avg_rank = statistics.mean(
-                [p.rank for p in products_of_brand if p.rank]
-            ) if any(p.rank for p in products_of_brand) else 0
+            products_of_brand = [p for p in self._products if (p.brand or "未知品牌") == brand]
+            avg_price = (
+                statistics.mean([p.price for p in products_of_brand if p.price])
+                if any(p.price for p in products_of_brand)
+                else 0
+            )
+            avg_rating = (
+                statistics.mean([p.rating for p in products_of_brand if p.rating])
+                if any(p.rating for p in products_of_brand)
+                else 0
+            )
+            avg_rank = (
+                statistics.mean([p.rank for p in products_of_brand if p.rank])
+                if any(p.rank for p in products_of_brand)
+                else 0
+            )
 
-            brand_shares.append(BrandShare(
-                brand=brand,
-                product_count=count,
-                share_percent=(count / total) * 100,
-                avg_price=avg_price,
-                avg_rating=avg_rating,
-                avg_rank=avg_rank,
-            ))
+            brand_shares.append(
+                BrandShare(
+                    brand=brand,
+                    product_count=count,
+                    share_percent=(count / total) * 100,
+                    avg_price=avg_price,
+                    avg_rating=avg_rating,
+                    avg_rank=avg_rank,
+                )
+            )
 
         # 计算 CR3 / CR5 / CR10
         cum_share = 0
@@ -158,16 +169,14 @@ class MarketConcentrationAnalyzer:
 
         # HHI = Σ(市场份额百分比²)，标准 HHI 范围 0-10000
         # 例如 40% → 1600, 25% → 625, 合计 2750 → 中高集中度
-        hhi = sum(bs.share_percent ** 2 for bs in brand_shares)
+        hhi = sum(bs.share_percent**2 for bs in brand_shares)
 
         # 等级判断
         level = self._brand_level(top_3_share, hhi)
 
         # Top 10 产品中的品牌数（产品多样性）
         top_10_products = self._products[:10]
-        unique_brands_top10 = len(set(
-            p.brand for p in top_10_products if p.brand
-        ))
+        unique_brands_top10 = len(set(p.brand for p in top_10_products if p.brand))
 
         return BrandConcentration(
             brands=brand_shares,
@@ -255,10 +264,15 @@ class MarketConcentrationAnalyzer:
         """分析价格区间分布，识别主力区间和真空区间"""
         if not self._prices:
             return PriceRangeAnalysis(
-                buckets=[], average_price=0, median_price=0,
-                min_price=0, max_price=0,
-                main_cluster_label="", main_cluster_share=0,
-                vacuum_zones=["数据不足"], recommended_entry="",
+                buckets=[],
+                average_price=0,
+                median_price=0,
+                min_price=0,
+                max_price=0,
+                main_cluster_label="",
+                main_cluster_share=0,
+                vacuum_zones=["数据不足"],
+                recommended_entry="",
             )
 
         prices_sorted = sorted(self._prices)
@@ -278,9 +292,7 @@ class MarketConcentrationAnalyzer:
         vacuum_zones = self._identify_vacuum_zones(buckets)
 
         # 建议切入价位
-        recommended_entry = self._recommend_entry(
-            buckets, avg_price, median_price, vacuum_zones
-        )
+        recommended_entry = self._recommend_entry(buckets, avg_price, median_price, vacuum_zones)
 
         return PriceRangeAnalysis(
             buckets=buckets,
@@ -317,14 +329,15 @@ class MarketConcentrationAnalyzer:
             label = f"${lo:.0f}-${hi:.0f}"
             if label not in buckets_map:
                 buckets_map[label] = {
-                    "min": lo, "max": hi,
-                    "products": [], "brands": set(),
-                    "ratings": [], "reviews": [],
+                    "min": lo,
+                    "max": hi,
+                    "products": [],
+                    "brands": set(),
+                    "ratings": [],
+                    "reviews": [],
                 }
             buckets_map[label]["products"].append(p)
-            buckets_map[label]["brands"].add(
-                self._get_brand_for_price(p)
-            )
+            buckets_map[label]["brands"].add(self._get_brand_for_price(p))
             r = self._get_rating_for_price(p)
             if r:
                 buckets_map[label]["ratings"].append(r)
@@ -339,16 +352,18 @@ class MarketConcentrationAnalyzer:
             count = len(data["products"])
             avg_rat = statistics.mean(data["ratings"]) if data["ratings"] else 0
             avg_rev = statistics.mean(data["reviews"]) if data["reviews"] else 0
-            buckets.append(PriceBucket(
-                label=label,
-                min_price=data["min"],
-                max_price=data["max"],
-                product_count=count,
-                share_percent=(count / total) * 100,
-                brands=sorted(data["brands"])[:10],
-                avg_rating=avg_rat,
-                avg_reviews=avg_rev,
-            ))
+            buckets.append(
+                PriceBucket(
+                    label=label,
+                    min_price=data["min"],
+                    max_price=data["max"],
+                    product_count=count,
+                    share_percent=(count / total) * 100,
+                    brands=sorted(data["brands"])[:10],
+                    avg_rating=avg_rat,
+                    avg_reviews=avg_rev,
+                )
+            )
 
         return buckets
 
@@ -359,12 +374,9 @@ class MarketConcentrationAnalyzer:
             # 产品数少于总产品数的 5% 且前后区间产品数都多于它
             if bucket.product_count <= max(1, len(self._prices) * 0.05):
                 # 检查是否是孤立的（周围区间产品更多）
-                left_dense = (
-                    i > 0 and buckets[i - 1].product_count > bucket.product_count * 2
-                )
+                left_dense = i > 0 and buckets[i - 1].product_count > bucket.product_count * 2
                 right_dense = (
-                    i < len(buckets) - 1
-                    and buckets[i + 1].product_count > bucket.product_count * 2
+                    i < len(buckets) - 1 and buckets[i + 1].product_count > bucket.product_count * 2
                 )
                 if left_dense or right_dense:
                     vacuum_zones.append(
@@ -477,9 +489,14 @@ class MarketConcentrationAnalyzer:
             category=category,
             total_products_analyzed=0,
             brand_concentration=BrandConcentration(
-                brands=[], top_3_share=0, top_5_share=0,
-                top_10_share=0, total_brands=0,
-                unique_brands_in_top_10=0, hhi=0, level="数据不足",
+                brands=[],
+                top_3_share=0,
+                top_5_share=0,
+                top_10_share=0,
+                total_brands=0,
+                unique_brands_in_top_10=0,
+                hhi=0,
+                level="数据不足",
             ),
             overall_verdict="无数据",
         )
@@ -491,7 +508,4 @@ class MarketConcentrationAnalyzer:
         category_results: Dict[str, List[AmazonProduct]],
     ) -> Dict[str, ConcentrationResult]:
         """批量分析多个品类的集中度（用于跨类目对比）"""
-        return {
-            cat: self.analyze(products, cat)
-            for cat, products in category_results.items()
-        }
+        return {cat: self.analyze(products, cat) for cat, products in category_results.items()}

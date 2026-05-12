@@ -21,6 +21,7 @@ from playwright.async_api import async_playwright, BrowserContext, Page
 # Stealth 插件
 try:
     from playwright_stealth import Stealth
+
     STEALTH_AVAILABLE = True
 except ImportError:
     STEALTH_AVAILABLE = False
@@ -29,9 +30,11 @@ logger = logging.getLogger(__name__)
 
 # ========== 配置结构 ==========
 
+
 @dataclass
 class RenderConfig:
     """渲染器配置"""
+
     headless: bool = True
     browser_type: str = "chromium"
     timeout: int = 30
@@ -40,6 +43,7 @@ class RenderConfig:
     stealth_enabled: bool = True
     stealth_patch_all: bool = True
     human_like: bool = True
+
 
 # ========== 7个关键手动补丁（2026最新） ==========
 
@@ -211,16 +215,17 @@ STEALTH_PATCHES = """
 
 # ========== 异步浏览器渲染器 ==========
 
+
 class BrowserRenderer:
     """异步浏览器渲染器（集成三层 Stealth）"""
-    
+
     def __init__(self, config: RenderConfig = None):
         self.config = config or RenderConfig()
         self._playwright: Optional[async_playwright] = None
         self._browser: Optional[BrowserContext] = None
         self._context: Optional[BrowserContext] = None
         self._initialized = False
-    
+
     def _get_random_ua(self) -> str:
         """随机 User-Agent（真实浏览器池）"""
         uas = [
@@ -230,51 +235,50 @@ class BrowserRenderer:
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
         ]
         return random.choice(uas)
-    
+
     async def init(self) -> None:
         """初始化浏览器实例（独立控制模式）"""
         if self._initialized:
             return
-        
+
         logger.info("启动 Playwright（Stealth 模式）...")
-        
+
         try:
             # 启动 Playwright
             self._playwright = await async_playwright().start()
-            
+
             # 启动参数（反检测）
             launch_args = [
-                '--disable-blink-features=AutomationControlled',
-                '--disable-features=IsolateOrigins,site-per-process',
-                '--disable-web-security',
-                '--disable-features=AudioServiceOutOfProcess',
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
+                "--disable-blink-features=AutomationControlled",
+                "--disable-features=IsolateOrigins,site-per-process",
+                "--disable-web-security",
+                "--disable-features=AudioServiceOutOfProcess",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--no-first-run",
+                "--no-zygote",
+                "--disable-gpu",
             ]
-            
+
             self._browser = await self._playwright.chromium.launch(
-                headless=self.config.headless,
-                args=launch_args
+                headless=self.config.headless, args=launch_args
             )
-            
+
             # 创建上下文（模拟真实浏览器）
             context_options = {
-                'user_agent': self.config.user_agent or self._get_random_ua(),
-                'viewport': {'width': 1920, 'height': 1080},
-                'locale': 'en-US',
-                'timezone_id': 'America/New_York',
-                'color_scheme': 'light',
-                'reduced_motion': 'no-preference',
-                'forced_colors': 'none',
+                "user_agent": self.config.user_agent or self._get_random_ua(),
+                "viewport": {"width": 1920, "height": 1080},
+                "locale": "en-US",
+                "timezone_id": "America/New_York",
+                "color_scheme": "light",
+                "reduced_motion": "no-preference",
+                "forced_colors": "none",
             }
-            
+
             self._context = await self._browser.new_context(**context_options)
-            
+
             # === 步骤1: 应用官方 Stealth 补丁 ===
             if STEALTH_AVAILABLE and self.config.stealth_enabled:
                 try:
@@ -283,25 +287,27 @@ class BrowserRenderer:
                     logger.info("✓ 官方 Stealth 补丁已应用")
                 except Exception as e:
                     logger.warning(f"官方 Stealth 失败: {e}")
-            
+
             # === 步骤2: 注入 7 个关键手动补丁 ===
             if self.config.stealth_patch_all:
                 try:
                     await self._context.add_init_script(STEALTH_PATCHES)
-                    logger.info("✓ 7个关键手动补丁已注入（navigator.webdriver, plugins, chrome.loadTimes/csi, permissions, WebGL, languages）")
+                    logger.info(
+                        "✓ 7个关键手动补丁已注入（navigator.webdriver, plugins, chrome.loadTimes/csi, permissions, WebGL, languages）"
+                    )
                 except Exception as e:
                     logger.warning(f"手动补丁注入失败: {e}")
-            
+
             # === 步骤3: 额外指纹混淆 ===
             await self._apply_extra_fingerprint_masking()
-            
+
             self._initialized = True
             logger.info("✓ Stealth 浏览器初始化完成（三层防御）")
-            
+
         except Exception as e:
             logger.error(f"浏览器初始化失败: {e}")
             raise
-    
+
     async def _apply_extra_fingerprint_masking(self) -> None:
         """额外指纹混淆（Canvas、AudioContext、permissions）"""
         extra_script = """
@@ -370,75 +376,77 @@ class BrowserRenderer:
             logger.debug("额外指纹混淆已应用")
         except Exception as e:
             logger.warning(f"额外混淆失败: {e}")
-    
+
     async def render(self, url: str, wait_for: str = None, scroll_to_bottom: bool = False) -> str:
         """渲染页面并返回 HTML"""
         if not self._initialized:
             await self.init()
-        
+
         logger.info(f"导航: {url}")
         page = await self._context.new_page()
-        
+
         try:
             # 人类化行为：随机鼠标移动
             if self.config.human_like:
                 await self._human_move(page)
-            
+
             # 导航
-            response = await page.goto(url, wait_until=self.config.wait_until, timeout=self.config.timeout * 1000)
-            
+            response = await page.goto(
+                url, wait_until=self.config.wait_until, timeout=self.config.timeout * 1000
+            )
+
             if not response or response.status >= 400:
                 raise Exception(f"HTTP {response.status if response else 'no response'}")
-            
+
             # 等待关键元素
             if wait_for:
                 try:
                     await page.wait_for_selector(wait_for, timeout=10000)
                 except:
                     logger.warning(f"等待选择器超时: {wait_for}")
-            
+
             # 人类化滚动
             if scroll_to_bottom:
                 await self._human_scroll(page)
             else:
                 if self.config.human_like:
                     await asyncio.sleep(random.uniform(1, 3))
-            
+
             # 获取 HTML
             html = await page.content()
             logger.info(f"✓ 渲染完成: {len(html):,} 字节")
             return html
-            
+
         finally:
             await page.close()
-    
+
     async def _human_move(self, page: Page) -> None:
         """模拟人类鼠标移动"""
         x = random.randint(100, 500)
         y = random.randint(100, 500)
         await page.mouse.move(x, y)
         await asyncio.sleep(random.uniform(0.5, 1.5))
-    
+
     async def _human_scroll(self, page: Page) -> None:
         """模拟人类滚动（渐进式）"""
         logger.debug("人类化滚动...")
         scroll_height = await page.evaluate("document.body.scrollHeight")
         viewport = await page.evaluate("window.innerHeight")
-        
+
         positions = []
         current = 0
         while current < scroll_height - viewport:
             step = random.randint(200, 600)
             current += step
             positions.append(min(current, scroll_height - viewport))
-        
+
         for pos in positions:
             await page.evaluate(f"window.scrollTo(0, {pos})")
             await asyncio.sleep(random.uniform(0.3, 1.0))
-        
+
         await page.evaluate("window.scrollTo(0, 0)")
         await asyncio.sleep(random.uniform(0.5, 1.5))
-    
+
     async def close(self):
         """清理资源"""
         if self._context:
@@ -450,15 +458,17 @@ class BrowserRenderer:
         self._initialized = False
         logger.info("浏览器已关闭")
 
+
 # ========== 同步渲染器 ==========
+
 
 class SyncRenderer:
     """同步渲染器（内部管理 asyncio）"""
-    
+
     def __init__(self, config: RenderConfig = None):
         self.config = config or RenderConfig()
         self._loop = None
-    
+
     def render(self, url: str, wait_for: str = None, scroll_to_bottom: bool = False) -> str:
         """同步渲染（阻塞式）"""
         try:
@@ -466,25 +476,29 @@ class SyncRenderer:
         except RuntimeError:
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
-        
+
         renderer = BrowserRenderer(self.config)
-        
+
         async def _render():
             await renderer.init()
             try:
                 return await renderer.render(url, wait_for, scroll_to_bottom)
             finally:
                 await renderer.close()
-        
+
         return self._loop.run_until_complete(_render())
-    
+
     def close(self):
         """清理（占位）"""
         pass
 
+
 # ========== 便捷函数 ==========
 
-async def render_page_async(url: str, config: RenderConfig = None, wait_for: str = None, scroll: bool = False) -> str:
+
+async def render_page_async(
+    url: str, config: RenderConfig = None, wait_for: str = None, scroll: bool = False
+) -> str:
     """异步便捷函数"""
     renderer = BrowserRenderer(config)
     await renderer.init()
@@ -493,7 +507,10 @@ async def render_page_async(url: str, config: RenderConfig = None, wait_for: str
     finally:
         await renderer.close()
 
-def render_page_sync(url: str, config: RenderConfig = None, wait_for: str = None, scroll: bool = False) -> str:
+
+def render_page_sync(
+    url: str, config: RenderConfig = None, wait_for: str = None, scroll: bool = False
+) -> str:
     """同步便捷函数"""
     renderer = SyncRenderer(config)
     try:

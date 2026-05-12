@@ -12,7 +12,6 @@ BrowserController - Playwright 浏览器生命周期管理
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
 
 from app.utils.logger import get_logger
 

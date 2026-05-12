@@ -1,6 +1,7 @@
 """
 扫描任务 API — 发现 / 审核 / 匹配
 """
+
 import inspect
 
 from fastapi import APIRouter, HTTPException, Request
@@ -22,6 +23,7 @@ def _get_scanner(request: Request):
 # 规则管理（必须在 /{task_id} 之前，避免路由冲突）
 # ═══════════════════════════════════════════════════════
 
+
 @router.get("/rules")
 async def get_rules(request: Request):
     scanner = _get_scanner(request)
@@ -31,6 +33,7 @@ async def get_rules(request: Request):
 @router.get("/rules/raw")
 async def get_rules_raw(request: Request):
     from dataclasses import asdict
+
     return asdict(_get_scanner(request).rules)
 
 
@@ -39,6 +42,7 @@ async def update_rules(request: Request):
     body = await request.json()
     scanner = _get_scanner(request)
     from dataclasses import fields
+
     valid = {f.name for f in fields(scanner.rules)}
     for k, v in body.items():
         if k in valid:
@@ -52,6 +56,7 @@ async def list_presets(request: Request):
     """获取所有预设规则集"""
     import json
     from pathlib import Path
+
     presets_file = Path(__file__).parents[4] / "data" / "rule_presets.json"
     if presets_file.exists():
         try:
@@ -66,6 +71,7 @@ async def apply_preset(request: Request, preset_id: str):
     """应用指定预设规则集"""
     import json
     from pathlib import Path
+
     presets_file = Path(__file__).parents[4] / "data" / "rule_presets.json"
     if not presets_file.exists():
         raise HTTPException(404, "预设文件不存在")
@@ -86,15 +92,20 @@ async def apply_preset(request: Request, preset_id: str):
 # 两阶段扫描：发现 → 匹配（独立执行）
 # ═══════════════════════════════════════════════════════
 
+
 @router.post("/discover-only")
 async def start_discover_only(
-    request: Request, category: str = "Pet Supplies",
-    max_products: int = 15, bsr_url: str = None,
+    request: Request,
+    category: str = "Pet Supplies",
+    max_products: int = 15,
+    bsr_url: str = None,
 ):
     """阶段1：仅 Amazon 发现（不含 1688 匹配）"""
     scanner = _get_scanner(request)
     task_id = await scanner.start_discover_only(
-        category=category, max_products=max_products, bsr_url=bsr_url,
+        category=category,
+        max_products=max_products,
+        bsr_url=bsr_url,
     )
     return {"success": True, "task_id": task_id, "phase": "discover"}
 
@@ -121,10 +132,13 @@ async def match_now(request: Request, task_id: str):
 # 一键扫描（推荐）
 # ═══════════════════════════════════════════════════════
 
+
 @router.post("/")
 async def start_scan(
-    request: Request, category: str = "Pet Supplies",
-    max_products: int = 15, bsr_url: str = None,
+    request: Request,
+    category: str = "Pet Supplies",
+    max_products: int = 15,
+    bsr_url: str = None,
 ):
     """兼容旧版入口：等同于 quick-scan。"""
     scanner = _get_scanner(request)
@@ -132,7 +146,9 @@ async def start_scan(
         result = scanner.start_scan(category=category, max_products=max_products)
     else:
         result = scanner.start_quick_scan(
-            category=category, max_products=max_products, bsr_url=bsr_url,
+            category=category,
+            max_products=max_products,
+            bsr_url=bsr_url,
         )
     task_id = await result if inspect.isawaitable(result) else result
     return {"success": True, "task_id": task_id, "mode": "quick"}
@@ -140,29 +156,39 @@ async def start_scan(
 
 @router.post("/quick-scan")
 async def start_quick_scan(
-    request: Request, category: str = "Pet Supplies",
-    max_products: int = 15, bsr_url: str = None,
+    request: Request,
+    category: str = "Pet Supplies",
+    max_products: int = 15,
+    bsr_url: str = None,
 ):
     """一键扫描：自动发现 + 匹配 + 高价值筛选"""
     scanner = _get_scanner(request)
     task_id = await scanner.start_quick_scan(
-        category=category, max_products=max_products, bsr_url=bsr_url,
+        category=category,
+        max_products=max_products,
+        bsr_url=bsr_url,
     )
     return {"success": True, "task_id": task_id, "mode": "quick"}
 
 
 @router.post("/deep-discover")
 async def start_deep_discover(
-    request: Request, category: str = "Pet Supplies",
-    max_products: int = 100, bsr_url: str = None,
+    request: Request,
+    category: str = "Pet Supplies",
+    max_products: int = 100,
+    bsr_url: str = None,
 ):
     """深度市场分析：爬取 Top 100 BSR + 品牌集中度 + 价格区间分析"""
     scanner = _get_scanner(request)
     task_id = await scanner.start_deep_discover(
-        category=category, max_products=max_products, bsr_url=bsr_url,
+        category=category,
+        max_products=max_products,
+        bsr_url=bsr_url,
     )
     return {
-        "success": True, "task_id": task_id, "mode": "deep_discover",
+        "success": True,
+        "task_id": task_id,
+        "mode": "deep_discover",
         "message": "深度爬取 Top 100 并分析市场集中度，预计 3-5 分钟完成",
     }
 
@@ -171,9 +197,11 @@ async def start_deep_discover(
 # 差评分析
 # ═══════════════════════════════════════════════════════
 
+
 @router.post("/review-analysis")
 async def start_review_analysis(
-    request: Request, asins: str = "",
+    request: Request,
+    asins: str = "",
     category: str = "Pet Supplies",
 ):
     """差评分析：爬取指定 ASIN 的 1-3 星评论并做缺陷聚类分析
@@ -189,10 +217,12 @@ async def start_review_analysis(
         raise HTTPException(400, "单次最多分析 10 个 ASIN")
 
     task_id = await scanner.start_review_analysis(
-        asins=asin_list, category=category,
+        asins=asin_list,
+        category=category,
     )
     return {
-        "success": True, "task_id": task_id,
+        "success": True,
+        "task_id": task_id,
         "mode": "review_analysis",
         "asin_count": len(asin_list),
         "message": f"正在分析 {len(asin_list)} 个产品的差评，预计 2-5 分钟",
@@ -201,7 +231,9 @@ async def start_review_analysis(
 
 @router.post("/review-analysis-from-task")
 async def review_analysis_from_task(
-    request: Request, task_id: str, max_asins: int = 5,
+    request: Request,
+    task_id: str,
+    max_asins: int = 5,
 ):
     """从已有扫描任务中取 ASIN 进行差评分析"""
     scanner = _get_scanner(request)
@@ -219,11 +251,14 @@ async def review_analysis_from_task(
         raise HTTPException(400, "任务中无商品数据")
 
     new_task_id = await scanner.start_review_analysis(
-        asins=asins, category=task.category,
+        asins=asins,
+        category=task.category,
     )
     return {
-        "success": True, "task_id": new_task_id,
-        "source_task": task_id, "asin_count": len(asins),
+        "success": True,
+        "task_id": new_task_id,
+        "source_task": task_id,
+        "asin_count": len(asins),
         "message": f"正在分析 {len(asins)} 个产品的差评",
     }
 
@@ -231,6 +266,7 @@ async def review_analysis_from_task(
 # ═══════════════════════════════════════════════════════
 # 定时任务管理
 # ═══════════════════════════════════════════════════════
+
 
 @router.get("/schedule")
 async def get_schedule(request: Request):
@@ -282,6 +318,7 @@ async def update_schedule(request: Request):
 # 趋势引擎 API
 # ═══════════════════════════════════════════════════════
 
+
 @router.get("/trends")
 async def list_trends(request: Request):
     """列出所有缓存品类趋势（按热度降序）"""
@@ -322,14 +359,19 @@ async def refresh_single_trend(request: Request, keyword: str):
 # Phase 1: 发现（传统分步模式）
 # ═══════════════════════════════════════════════════════
 
+
 @router.post("/discover")
 async def start_discover(
-    request: Request, category: str = "Pet Supplies",
-    max_products: int = 20, bsr_url: str = None,
+    request: Request,
+    category: str = "Pet Supplies",
+    max_products: int = 20,
+    bsr_url: str = None,
 ):
     scanner = _get_scanner(request)
     task_id = await scanner.start_discover(
-        category=category, max_products=max_products, bsr_url=bsr_url,
+        category=category,
+        max_products=max_products,
+        bsr_url=bsr_url,
     )
     return {"success": True, "task_id": task_id, "phase": "review"}
 
@@ -337,6 +379,7 @@ async def start_discover(
 # ═══════════════════════════════════════════════════════
 # Phase 2: 审核（/{task_id}/... 必须在最后）
 # ═══════════════════════════════════════════════════════
+
 
 @router.post("/{task_id}/approve/{asin}")
 async def approve_product(request: Request, task_id: str, asin: str):
@@ -387,11 +430,16 @@ async def product_detail(request: Request, task_id: str, asin: str):
     )
 
     return {
-        "asin": product.asin, "title": product.title,
-        "brand": product.brand, "category_path": product.category_path,
-        "chinese_keywords": translation["chinese"], "keywords": translation["keywords"],
-        "rank": product.rank, "price": product.price,
-        "rating": product.rating, "review_count": product.review_count,
+        "asin": product.asin,
+        "title": product.title,
+        "brand": product.brand,
+        "category_path": product.category_path,
+        "chinese_keywords": translation["chinese"],
+        "keywords": translation["keywords"],
+        "rank": product.rank,
+        "price": product.price,
+        "rating": product.rating,
+        "review_count": product.review_count,
         "amazon_url": f"https://www.amazon.com/dp/{product.asin}",
         "alibaba_count": len(ali_products),
         "alibaba_products": [p.model_dump() for p in ali_products],
@@ -403,6 +451,7 @@ async def product_detail(request: Request, task_id: str, asin: str):
 # Phase 3: 匹配
 # ═══════════════════════════════════════════════════════
 
+
 @router.post("/{task_id}/match")
 async def start_matching(request: Request, task_id: str):
     scanner = _get_scanner(request)
@@ -411,7 +460,8 @@ async def start_matching(request: Request, task_id: str):
         raise HTTPException(400, "无已审核商品或任务不在审核阶段")
     task = scanner.get_task(task_id)
     return {
-        "success": True, "task_id": task_id,
+        "success": True,
+        "task_id": task_id,
         "approved_count": task.approved_count if task else 0,
         "phase": "matching",
     }

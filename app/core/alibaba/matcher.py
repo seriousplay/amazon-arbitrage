@@ -8,6 +8,7 @@ AlibabaMatcher - 1688 匹配器（Facade）
 - 管理浏览器生命周期
 """
 
+import logging
 from typing import List, Optional
 
 from app.models.product import AlibabaProduct as PydanticAlibabaProduct
@@ -15,6 +16,8 @@ from app.core.alibaba.browser import BrowserController
 from app.core.alibaba.captcha import CaptchaSolver
 from app.core.alibaba.search import SearchHandler
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AlibabaMatcher:
@@ -37,11 +40,11 @@ class AlibabaMatcher:
         self.use_browser = use_browser
 
         # 初始化组件
-        headless = getattr(config, 'PLAYWRIGHT_HEADLESS', True)
+        headless = getattr(config, "PLAYWRIGHT_HEADLESS", True)
         self.browser_controller = BrowserController(headless=headless)
 
-        captcha_confidence = getattr(config, 'CAPTCHA_CONFIDENCE_THRESHOLD', 0.8)
-        captcha_debug = getattr(config, 'CAPTCHA_DEBUG', False)
+        captcha_confidence = getattr(config, "CAPTCHA_CONFIDENCE_THRESHOLD", 0.8)
+        captcha_debug = getattr(config, "CAPTCHA_DEBUG", False)
         self.captcha_solver = CaptchaSolver(
             debug=captcha_debug,
             confidence_threshold=captcha_confidence,

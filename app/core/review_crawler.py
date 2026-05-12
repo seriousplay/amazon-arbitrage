@@ -26,8 +26,8 @@ USER_AGENTS = [
 class ReviewCrawler:
     """Amazon 评论爬虫 — 异步采集 + 自动重试 + UA 轮换"""
 
-    MAX_REVIEWS_PER_PRODUCT = 50    # 每产品最多爬取评论数
-    REVIEWS_PER_PAGE = 10           # Amazon 每页 10 条评论
+    MAX_REVIEWS_PER_PRODUCT = 50  # 每产品最多爬取评论数
+    REVIEWS_PER_PAGE = 10  # Amazon 每页 10 条评论
 
     def __init__(self, config):
         self.config = config
@@ -76,15 +76,11 @@ class ReviewCrawler:
                 break  # 无更多评论
 
             # 按评分过滤
-            filtered = [
-                r for r in page_reviews
-                if min_rating <= r.rating <= max_rating
-            ]
+            filtered = [r for r in page_reviews if min_rating <= r.rating <= max_rating]
             all_reviews.extend(filtered)
 
             logger.info(
-                f"评论爬取: {asin} 第{page}页 → "
-                f"{len(page_reviews)}条(含{len(filtered)}条差评)"
+                f"评论爬取: {asin} 第{page}页 → " f"{len(page_reviews)}条(含{len(filtered)}条差评)"
             )
 
             page += 1
@@ -136,9 +132,7 @@ class ReviewCrawler:
 
         # Amazon 评论容器选择器
         review_elements = soup.select(
-            "div[data-hook='review'], "
-            "div.review, "
-            "div.a-section.review"
+            "div[data-hook='review'], " "div.review, " "div.a-section.review"
         )
 
         for el in review_elements:
@@ -146,9 +140,7 @@ class ReviewCrawler:
                 # 评分
                 rating = None
                 rating_el = el.select_one(
-                    "i[data-hook='review-star-rating'], "
-                    "i.a-icon-star, "
-                    "span.a-icon-alt"
+                    "i[data-hook='review-star-rating'], " "i.a-icon-star, " "span.a-icon-alt"
                 )
                 if rating_el:
                     text = rating_el.get("aria-label") or rating_el.get_text(strip=True)
@@ -169,9 +161,7 @@ class ReviewCrawler:
 
                 # 正文
                 text_el = el.select_one(
-                    "span[data-hook='review-body'], "
-                    "div.review-text, "
-                    "span.review-text"
+                    "span[data-hook='review-body'], " "div.review-text, " "span.review-text"
                 )
                 text = text_el.get_text(strip=True) if text_el else ""
 
@@ -179,17 +169,12 @@ class ReviewCrawler:
                     continue
 
                 # 日期
-                date_el = el.select_one(
-                    "span[data-hook='review-date'], "
-                    "span.review-date"
-                )
+                date_el = el.select_one("span[data-hook='review-date'], " "span.review-date")
                 date = date_el.get_text(strip=True) if date_el else ""
 
                 # 评论者
                 author_el = el.select_one(
-                    "a[data-hook='review-author'], "
-                    "span.a-profile-name, "
-                    "span.review-author"
+                    "a[data-hook='review-author'], " "span.a-profile-name, " "span.review-author"
                 )
                 author = author_el.get_text(strip=True) if author_el else "Unknown"
 
@@ -197,12 +182,17 @@ class ReviewCrawler:
                 vp_el = el.select_one("span[data-hook='avp-badge']")
                 verified = vp_el is not None
 
-                reviews.append(ReviewItem(
-                    asin=asin, rating=rating,
-                    title=title[:200], text=text[:2000],
-                    date=date[:50], reviewer=author[:50],
-                    verified_purchase=verified,
-                ))
+                reviews.append(
+                    ReviewItem(
+                        asin=asin,
+                        rating=rating,
+                        title=title[:200],
+                        text=text[:2000],
+                        date=date[:50],
+                        reviewer=author[:50],
+                        verified_purchase=verified,
+                    )
+                )
 
             except Exception:
                 continue
@@ -231,7 +221,8 @@ class ReviewCrawler:
             async with sem:
                 try:
                     reviews = await self.crawl_reviews(
-                        asin, max_reviews=max_reviews_per_product,
+                        asin,
+                        max_reviews=max_reviews_per_product,
                     )
                     return asin, reviews
                 except Exception as e:

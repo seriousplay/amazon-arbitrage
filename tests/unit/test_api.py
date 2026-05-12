@@ -1,6 +1,7 @@
 """
 API 端点 smoke test
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
@@ -84,10 +85,18 @@ class TestResultsEndpoints:
         assert resp.status_code == 404
 
     def test_get_latest(self, test_app, mock_storage):
-        mock_storage.list_recent_tasks = AsyncMock(return_value=[
-            {"id": "t1", "category": "Dogs", "amazon_count": 10, "match_count": 3,
-             "status": "completed", "created_at": "2026-01-01T00:00:00"}
-        ])
+        mock_storage.list_recent_tasks = AsyncMock(
+            return_value=[
+                {
+                    "id": "t1",
+                    "category": "Dogs",
+                    "amazon_count": 10,
+                    "match_count": 3,
+                    "status": "completed",
+                    "created_at": "2026-01-01T00:00:00",
+                }
+            ]
+        )
         client = TestClient(test_app)
         resp = client.get("/api/v1/results/latest?limit=5")
         assert resp.status_code == 200

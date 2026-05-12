@@ -9,13 +9,14 @@ from typing import List, Optional
 @dataclass
 class ReviewItem:
     """单条评论"""
+
     asin: str
-    rating: float                 # 评分 (1-5)
-    title: str                    # 评论标题
-    text: str                     # 评论正文
-    date: str                     # 评论日期
-    reviewer: str                 # 评论者
-    verified_purchase: bool       # 是否Verified Purchase
+    rating: float  # 评分 (1-5)
+    title: str  # 评论标题
+    text: str  # 评论正文
+    date: str  # 评论日期
+    reviewer: str  # 评论者
+    verified_purchase: bool  # 是否Verified Purchase
 
     def to_dict(self) -> dict:
         return {
@@ -32,12 +33,13 @@ class ReviewItem:
 @dataclass
 class ComplaintCluster:
     """投诉聚类"""
-    label: str                    # 聚类标签，如 "质量缺陷"
-    keywords: List[str]           # 关键词列表
-    count: int                    # 提及次数
-    severity: str                 # 严重程度：高/中/低
-    example_reviews: List[str]    # 示例评论（原文片段）
-    improvement_suggestion: str   # 改进建议
+
+    label: str  # 聚类标签，如 "质量缺陷"
+    keywords: List[str]  # 关键词列表
+    count: int  # 提及次数
+    severity: str  # 严重程度：高/中/低
+    example_reviews: List[str]  # 示例评论（原文片段）
+    improvement_suggestion: str  # 改进建议
 
     def to_dict(self) -> dict:
         return {
@@ -53,15 +55,16 @@ class ComplaintCluster:
 @dataclass
 class ReviewAnalysis:
     """差评分析结果（针对一个 ASIN）"""
+
     asin: str
-    title: str                    # 产品标题
-    total_reviews_analyzed: int   # 分析的评论总数
-    negative_review_count: int    # 差评数（1-3星）
-    average_rating: float         # 评论平均分
+    title: str  # 产品标题
+    total_reviews_analyzed: int  # 分析的评论总数
+    negative_review_count: int  # 差评数（1-3星）
+    average_rating: float  # 评论平均分
     clusters: List[ComplaintCluster]  # 投诉聚类
-    top_defect: str               # 核心缺陷一句话总结
-    overall_rating: str           # 综合品控评价：优/良/中/差
-    actionable_advice: str        # 可落地的改进建议
+    top_defect: str  # 核心缺陷一句话总结
+    overall_rating: str  # 综合品控评价：优/良/中/差
+    actionable_advice: str  # 可落地的改进建议
 
     def to_dict(self) -> dict:
         return {
@@ -80,11 +83,12 @@ class ReviewAnalysis:
 @dataclass
 class ReviewAnalysisBatch:
     """批量差评分析结果"""
+
     category: str
     products_analyzed: int
     results: List[ReviewAnalysis]
-    cross_cutting_defects: List[str]       # 跨产品的共性问题
-    category_opportunity_note: str         # 基于差评的品类机会判断
+    cross_cutting_defects: List[str]  # 跨产品的共性问题
+    category_opportunity_note: str  # 基于差评的品类机会判断
 
     def to_dict(self) -> dict:
         return {

@@ -12,7 +12,7 @@ from requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def retry(
@@ -20,7 +20,7 @@ def retry(
     initial_delay: float = 1.0,
     max_delay: float = 30.0,
     backoff_factor: float = 2.0,
-    exceptions: tuple = (RequestException, ConnectionError, TimeoutError)
+    exceptions: tuple = (RequestException, ConnectionError, TimeoutError),
 ):
     """
     指数退避重试装饰器
@@ -32,6 +32,7 @@ def retry(
         backoff_factor: 退避倍数
         exceptions: 捕获的异常类型
     """
+
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
@@ -51,15 +52,14 @@ def retry(
                     # 指数退避 + 随机抖动（±20%）
                     jitter = random.uniform(0.8, 1.2)
                     sleep_time = min(delay * jitter, max_delay)
-                    logger.warning(
-                        f"⚠️  {func.__name__} 失败，{sleep_time:.1f}s后重试: {e}"
-                    )
+                    logger.warning(f"⚠️  {func.__name__} 失败，{sleep_time:.1f}s后重试: {e}")
                     time.sleep(sleep_time)
                     delay *= backoff_factor
 
             raise last_exception  # type: ignore
 
         return wrapper
+
     return decorator
 
 

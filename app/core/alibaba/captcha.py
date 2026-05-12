@@ -13,11 +13,10 @@ CaptchaSolver - 滑块验证码破解器
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
-from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -76,14 +75,14 @@ class CaptchaSolver:
     async def _detect_captcha(self, page) -> bool:
         """检测页面是否出现滑块验证码"""
         captcha_selectors = [
-            '.nc-lang-clear',
-            '.nc_iconfont.btn_slide',
-            '#nc_1_n1z',
-            '.nc-container',
+            ".nc-lang-clear",
+            ".nc_iconfont.btn_slide",
+            "#nc_1_n1z",
+            ".nc-container",
             '[class*="slider"]',
             '[class*="captcha"]',
-            '.captcha-slider',
-            '#baxia-dialog-content',
+            ".captcha-slider",
+            "#baxia-dialog-content",
         ]
 
         for selector in captcha_selectors:
@@ -92,7 +91,7 @@ class CaptchaSolver:
                 if element:
                     logger.info(f"检测到验证码元素: {selector}")
                     return True
-            except:
+            except Exception:
                 continue
 
         return False
@@ -105,7 +104,7 @@ class CaptchaSolver:
         """
         try:
             # 尝试找到滑块并直接拖拽
-            slider = await page.query_selector('.nc-lang-clear, .nc_iconfont.btn_slide')
+            slider = await page.query_selector(".nc-lang-clear, .nc_iconfont.btn_slide")
             if not slider:
                 return False
 
@@ -114,9 +113,9 @@ class CaptchaSolver:
                 return False
 
             # 简单的直线拖拽
-            await page.mouse.move(box['x'] + 10, box['y'] + box['height'] / 2)
+            await page.mouse.move(box["x"] + 10, box["y"] + box["height"] / 2)
             await page.mouse.down()
-            await page.mouse.move(box['x'] + 200, box['y'] + box['height'] / 2, steps=10)
+            await page.mouse.move(box["x"] + 200, box["y"] + box["height"] / 2, steps=10)
             await page.mouse.up()
 
             # 等待并检查是否通过

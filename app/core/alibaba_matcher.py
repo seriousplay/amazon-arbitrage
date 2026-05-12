@@ -5,7 +5,6 @@
 import asyncio
 import json
 import re
-import time
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import quote_plus
@@ -17,9 +16,7 @@ from app.utils.category_mapper import category_to_search
 
 logger = get_logger(__name__)
 
-COOKIE_FILE = (
-    Path(__file__).parent.parent.parent / "data" / "cookies" / "1688_cookies.json"
-)
+COOKIE_FILE = Path(__file__).parent.parent.parent / "data" / "cookies" / "1688_cookies.json"
 
 
 class AlibabaMatcher:
@@ -57,6 +54,7 @@ class AlibabaMatcher:
             if self._browser is not None:
                 return  # 双重检查
             from playwright.async_api import async_playwright
+
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch(
                 headless=True,
@@ -252,8 +250,7 @@ class AlibabaMatcher:
 
         if result and len(result) < len(ali_products):
             logger.info(
-                f"  相关性过滤: {len(ali_products)} → {len(result)} "
-                f"(关键词: {cn_keywords})"
+                f"  相关性过滤: {len(ali_products)} → {len(result)} " f"(关键词: {cn_keywords})"
             )
 
         return result
@@ -390,13 +387,17 @@ class AlibabaMatcher:
                 moq = int(item.get("moqText", 2) or 2)
                 supplier = item.get("supplier", "") or "1688供应商"
                 title = re.sub(r"元宝.*|先采后付|回头率.*|退货.*|运费.*|\\+件.*", "", title).strip()
-                products.append(PydanticAlibabaProduct(
-                    item_id=oid, title=title[:200], price=price,
-                    min_order_qty=max(2, moq),
-                    supplier=supplier[:100] if supplier else "1688供应商",
-                    item_url=f"https://detail.1688.com/offer/{oid}.html",
-                    matched_score=50.0,
-                ))
+                products.append(
+                    PydanticAlibabaProduct(
+                        item_id=oid,
+                        title=title[:200],
+                        price=price,
+                        min_order_qty=max(2, moq),
+                        supplier=supplier[:100] if supplier else "1688供应商",
+                        item_url=f"https://detail.1688.com/offer/{oid}.html",
+                        matched_score=50.0,
+                    )
+                )
 
             self._last_debug["found"] = len(products)
             self._last_debug["raw_count"] = len(raw_data or [])
@@ -405,6 +406,7 @@ class AlibabaMatcher:
 
         except Exception as e:
             import traceback
+
             self._last_debug["error"] = str(e)
             self._last_debug["traceback"] = traceback.format_exc()[-500:]
             logger.error(f"1688 搜索异常: {e}\n{traceback.format_exc()}")
@@ -461,6 +463,7 @@ class AlibabaMatcher:
     def _parse(self, html: str, keyword: str) -> List[PydanticAlibabaProduct]:
         """从渲染后的 HTML 提取商品数据"""
         from bs4 import BeautifulSoup
+
         soup = BeautifulSoup(html, "lxml")
 
         # 方式 1: 从 script 标签提取 JSON
@@ -495,9 +498,9 @@ class AlibabaMatcher:
             r'"offerList"\s*:\s*(\[.+?\])',
             r'"items"\s*:\s*(\[.+?\])',
             r'"result"\s*:\s*(\[.+?\])',
-            r'window\.__DATA__\s*=\s*(\{.+?\});',
-            r'window\.__INITIAL_STATE__\s*=\s*(\{.+?\});',
-            r'__NEXT_DATA__\s*=\s*(\{.+?\});',
+            r"window\.__DATA__\s*=\s*(\{.+?\});",
+            r"window\.__INITIAL_STATE__\s*=\s*(\{.+?\});",
+            r"__NEXT_DATA__\s*=\s*(\{.+?\});",
         ]
         for pat in patterns:
             for match in re.finditer(pat, html, re.DOTALL):
@@ -520,6 +523,7 @@ class AlibabaMatcher:
     def _parse_from_links(self, html: str, links: list) -> List[PydanticAlibabaProduct]:
         """从 offerId 参数或 offer 链接提取商品"""
         from bs4 import BeautifulSoup
+
         soup = BeautifulSoup(html, "lxml")
         results = []
         seen_ids = set()
@@ -555,7 +559,9 @@ class AlibabaMatcher:
 
             # 标题
             title = ""
-            for el in container.select("a[title], h3, .title, [class*='title'], [class*='subject']"):
+            for el in container.select(
+                "a[title], h3, .title, [class*='title'], [class*='subject']"
+            ):
                 t = el.get("title") or el.get_text(strip=True)
                 if len(t) > len(title) and len(t) >= 4:
                     title = t
@@ -572,7 +578,9 @@ class AlibabaMatcher:
 
             # 供应商
             supplier = "1688供应商"
-            sup_el = container.select_one("[class*='supplier'], [class*='company'], [class*='shop']")
+            sup_el = container.select_one(
+                "[class*='supplier'], [class*='company'], [class*='shop']"
+            )
             if sup_el:
                 supplier = sup_el.get_text(strip=True)[:100]
 
@@ -582,12 +590,17 @@ class AlibabaMatcher:
             if moq_m:
                 moq = int(moq_m.group(1))
 
-            results.append(PydanticAlibabaProduct(
-                item_id=oid, title=title[:200], price=price,
-                min_order_qty=max(2, moq), supplier=supplier,
-                item_url=f"https://detail.1688.com/offer/{oid}.html",
-                matched_score=50.0,
-            ))
+            results.append(
+                PydanticAlibabaProduct(
+                    item_id=oid,
+                    title=title[:200],
+                    price=price,
+                    min_order_qty=max(2, moq),
+                    supplier=supplier,
+                    item_url=f"https://detail.1688.com/offer/{oid}.html",
+                    matched_score=50.0,
+                )
+            )
 
         return results
 
@@ -619,8 +632,11 @@ class AlibabaMatcher:
         )
         if not items:
             # 宽泛回退：找含价格、标题链接的容器
-            items = [d for d in soup.select("div, li")
-                     if d.select_one("a[href*='offer']") and "¥" in d.get_text()]
+            items = [
+                d
+                for d in soup.select("div, li")
+                if d.select_one("a[href*='offer']") and "¥" in d.get_text()
+            ]
 
         results = []
         seen_titles = set()
@@ -629,8 +645,18 @@ class AlibabaMatcher:
                 text = item.get_text(strip=True)
 
                 # 过滤非商品（聊天窗口、广告、导航等）
-                skip_words = ["交流", "聊天", "语音", "视频", "扫码", "下载APP",
-                              "导航", "分类", "筛选", "排序"]
+                skip_words = [
+                    "交流",
+                    "聊天",
+                    "语音",
+                    "视频",
+                    "扫码",
+                    "下载APP",
+                    "导航",
+                    "分类",
+                    "筛选",
+                    "排序",
+                ]
                 if any(w in text for w in skip_words):
                     continue
 
@@ -652,8 +678,15 @@ class AlibabaMatcher:
 
                 # 提取标题
                 title = ""
-                for sel in ["a[title]", "a.offer-title", "h3", "a[class*='title']",
-                            "a[class*='Title']", ".offer-title", "[class*='title']"]:
+                for sel in [
+                    "a[title]",
+                    "a.offer-title",
+                    "h3",
+                    "a[class*='title']",
+                    "a[class*='Title']",
+                    ".offer-title",
+                    "[class*='title']",
+                ]:
                     el = item.select_one(sel)
                     if el:
                         t = el.get("title") or el.get_text(strip=True)
@@ -688,13 +721,17 @@ class AlibabaMatcher:
                 if moq_m:
                     moq = int(moq_m.group(1))
 
-                results.append(PydanticAlibabaProduct(
-                    item_id=pid or f"pw_{abs(hash(title)) % 10**9:09d}",
-                    title=title[:200], price=price,
-                    min_order_qty=max(2, moq),
-                    supplier=supplier, item_url=offer_url or None,
-                    matched_score=50.0,
-                ))
+                results.append(
+                    PydanticAlibabaProduct(
+                        item_id=pid or f"pw_{abs(hash(title)) % 10**9:09d}",
+                        title=title[:200],
+                        price=price,
+                        min_order_qty=max(2, moq),
+                        supplier=supplier,
+                        item_url=offer_url or None,
+                        matched_score=50.0,
+                    )
+                )
             except Exception:
                 continue
         return results
@@ -720,51 +757,46 @@ class AlibabaMatcher:
                 moq = o.get("minOrderQuantity") or o.get("beginQuantity") or 2
                 if isinstance(moq, str):
                     moq = int(re.sub(r"\D", "", moq) or 2)
-                products.append(PydanticAlibabaProduct(
-                    item_id=str(o.get("offerId", "")),
-                    title=title[:200], price=price,
-                    min_order_qty=max(2, int(moq)),
-                    supplier=str(o.get("companyName") or "1688供应商")[:100],
-                    matched_score=50.0,
-                ))
+                products.append(
+                    PydanticAlibabaProduct(
+                        item_id=str(o.get("offerId", "")),
+                        title=title[:200],
+                        price=price,
+                        min_order_qty=max(2, int(moq)),
+                        supplier=str(o.get("companyName") or "1688供应商")[:100],
+                        matched_score=50.0,
+                    )
+                )
             except Exception:
                 continue
         return products
 
     async def match_amazon_product(
-        self,
-        asin: str,
-        title: str,
-        category: str,
-        price: float = None,
-        max_results: int = 3
+        self, asin: str, title: str, category: str, price: float = None, max_results: int = 3
     ) -> Optional[PydanticAlibabaProduct]:
         """
         匹配单个 Amazon 商品到 1688 最优供应商
-        
+
         对应原技能 AlibabaMatcherFull.match_amazon_product 的简化接口
         """
         if not self._has_cookies:
             return None
-        
+
         try:
             # 调用 search_and_match 获取候选列表
             products = await self.search_and_match(
-                keyword=title,
-                category=category,
-                category_path=category
+                keyword=title, category=category, category_path=category
             )
-            
+
             if not products:
                 return None
-            
+
             # 返回评分最高的一个（match_and_match 已按相关性排序）
             return products[0] if products else None
-            
+
         except Exception as e:
             logger.error(f"match_amazon_product 失败 ({asin}): {e}")
             return None
-
 
     async def cleanup(self):
         """关闭全局浏览器实例（应用退出时调用）"""

@@ -114,7 +114,7 @@ class SearchHandler:
 
             # 构建搜索 URL
             encoded_keyword = await asyncio.to_thread(
-                lambda: __import__('urllib.parse').quote_plus(keyword)
+                lambda: __import__("urllib.parse").quote_plus(keyword)
             )
             search_url = f"https://s.1688.com/selloffer/offer_search.htm?keywords={encoded_keyword}"
 
@@ -153,7 +153,7 @@ class SearchHandler:
             import httpx
 
             encoded_keyword = await asyncio.to_thread(
-                lambda: __import__('urllib.parse').quote_plus(keyword)
+                lambda: __import__("urllib.parse").quote_plus(keyword)
             )
             search_url = f"https://s.1688.com/selloffer/offer_search.htm?keywords={encoded_keyword}"
 
@@ -201,10 +201,10 @@ class SearchHandler:
 
         try:
             # 等待商品列表加载
-            await page.wait_for_selector('.offer-item, [data-offerid]', timeout=10000)
+            await page.wait_for_selector(".offer-item, [data-offerid]", timeout=10000)
 
             # 提取商品数据
-            items = await page.query_selector_all('.offer-item, [data-offerid]')
+            items = await page.query_selector_all(".offer-item, [data-offerid]")
             logger.info(f"找到 {len(items)} 个商品项")
 
             for item in items[:max_results]:
@@ -241,11 +241,11 @@ class SearchHandler:
         """
         from bs4 import BeautifulSoup
 
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, "html.parser")
         results = []
 
         # 查找商品列表
-        items = soup.select('.offer-item, [data-offerid]')
+        items = soup.select(".offer-item, [data-offerid]")
         logger.info(f"HTML 解析找到 {len(items)} 个商品项")
 
         for item in items[:max_results]:
@@ -264,32 +264,32 @@ class SearchHandler:
         """从浏览器元素提取商品信息"""
         try:
             # 提取标题
-            title_elem = await element.query_selector('.title, .offer-title, a[title]')
-            title = await title_elem.get_attribute('title') if title_elem else ""
+            title_elem = await element.query_selector(".title, .offer-title, a[title]")
+            title = await title_elem.get_attribute("title") if title_elem else ""
 
             # 提取价格
-            price_elem = await element.query_selector('.price, .offer-price')
+            price_elem = await element.query_selector(".price, .offer-price")
             price_text = await price_elem.inner_text() if price_elem else "0"
-            price = float(re.sub(r'[^\d.]', '', price_text) or 0)
+            price = float(re.sub(r"[^\d.]", "", price_text) or 0)
 
             # 提取供应商
-            supplier_elem = await element.query_selector('.company-name, .seller-name')
+            supplier_elem = await element.query_selector(".company-name, .seller-name")
             supplier = await supplier_elem.inner_text() if supplier_elem else "Unknown"
 
             # 提取链接
-            link_elem = await element.query_selector('a[href]')
-            href = await link_elem.get_attribute('href') if link_elem else ""
-            if href and not href.startswith('http'):
+            link_elem = await element.query_selector("a[href]")
+            href = await link_elem.get_attribute("href") if link_elem else ""
+            if href and not href.startswith("http"):
                 href = f"https:{href}"
 
             # 提取商品ID
-            item_id_match = re.search(r'/(\d+)\.html', href)
+            item_id_match = re.search(r"/(\d+)\.html", href)
             item_id = item_id_match.group(1) if item_id_match else ""
 
             # 提取起订量
-            moq_elem = await element.query_selector('.moq, .min-order')
+            moq_elem = await element.query_selector(".moq, .min-order")
             moq_text = await moq_elem.inner_text() if moq_elem else "1"
-            moq_match = re.search(r'\d+', moq_text)
+            moq_match = re.search(r"\d+", moq_text)
             moq = int(moq_match.group()) if moq_match else 1
 
             return PydanticAlibabaProduct(
@@ -311,32 +311,32 @@ class SearchHandler:
         """从 BeautifulSoup 元素提取商品信息"""
         try:
             # 提取标题
-            title_elem = element.select_one('.title, .offer-title, a[title]')
-            title = title_elem.get('title', '') if title_elem else ""
+            title_elem = element.select_one(".title, .offer-title, a[title]")
+            title = title_elem.get("title", "") if title_elem else ""
 
             # 提取价格
-            price_elem = element.select_one('.price, .offer-price')
+            price_elem = element.select_one(".price, .offer-price")
             price_text = price_elem.get_text(strip=True) if price_elem else "0"
-            price = float(re.sub(r'[^\d.]', '', price_text) or 0)
+            price = float(re.sub(r"[^\d.]", "", price_text) or 0)
 
             # 提取供应商
-            supplier_elem = element.select_one('.company-name, .seller-name')
+            supplier_elem = element.select_one(".company-name, .seller-name")
             supplier = supplier_elem.get_text(strip=True) if supplier_elem else "Unknown"
 
             # 提取链接
-            link_elem = element.select_one('a[href]')
-            href = link_elem.get('href', '') if link_elem else ""
-            if href and not href.startswith('http'):
+            link_elem = element.select_one("a[href]")
+            href = link_elem.get("href", "") if link_elem else ""
+            if href and not href.startswith("http"):
                 href = f"https:{href}"
 
             # 提取商品ID
-            item_id_match = re.search(r'/(\d+)\.html', href)
+            item_id_match = re.search(r"/(\d+)\.html", href)
             item_id = item_id_match.group(1) if item_id_match else ""
 
             # 提取起订量
-            moq_elem = element.select_one('.moq, .min-order')
+            moq_elem = element.select_one(".moq, .min-order")
             moq_text = moq_elem.get_text(strip=True) if moq_elem else "1"
-            moq_match = re.search(r'\d+', moq_text)
+            moq_match = re.search(r"\d+", moq_text)
             moq = int(moq_match.group()) if moq_match else 1
 
             return PydanticAlibabaProduct(

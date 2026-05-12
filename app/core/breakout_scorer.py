@@ -1,6 +1,7 @@
 """
 爆款选品智能评分引擎 — 基于 11 维度选品逻辑
 """
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -12,32 +13,38 @@ from app.core.trends import TrendEngine
 @dataclass
 class BreakoutScore:
     """11 维度爆款评分"""
+
     # ─── 产品基本面（0-20分）─────────────────
-    product_fundamentals: float = 0.0     # 产品质量/退货/复购预估
+    product_fundamentals: float = 0.0  # 产品质量/退货/复购预估
     # ─── 市场需求（0-20分）───────────────────
-    market_demand: float = 0.0            # 销量/搜索量/趋势
+    market_demand: float = 0.0  # 销量/搜索量/趋势
     # ─── 竞争格局（0-15分）───────────────────
-    competition: float = 0.0              # 集中度/新品机会
+    competition: float = 0.0  # 集中度/新品机会
     # ─── 利润空间（0-20分）───────────────────
-    profit_potential: float = 0.0         # 价差/利润率
+    profit_potential: float = 0.0  # 价差/利润率
     # ─── 供应链（0-10分）───────────────────
-    supply_chain: float = 0.0             # 1688供给/物流
+    supply_chain: float = 0.0  # 1688供给/物流
     # ─── 风险（0-10分，扣分制）──────────────
-    risk: float = 0.0                     # 侵权/季节/认证
+    risk: float = 0.0  # 侵权/季节/认证
     # ─── 趋势（0-5分）─────────────────────
-    trend: float = 0.0                    # 热搜/社媒热度
+    trend: float = 0.0  # 热搜/社媒热度
 
     @property
     def total(self) -> float:
-        return min(100.0, sum([
-            self.product_fundamentals,
-            self.market_demand,
-            self.competition,
-            self.profit_potential,
-            self.supply_chain,
-            self.risk,  # 风险已是负分
-            self.trend,
-        ]))
+        return min(
+            100.0,
+            sum(
+                [
+                    self.product_fundamentals,
+                    self.market_demand,
+                    self.competition,
+                    self.profit_potential,
+                    self.supply_chain,
+                    self.risk,  # 风险已是负分
+                    self.trend,
+                ]
+            ),
+        )
 
     @property
     def grade(self) -> str:
@@ -62,7 +69,7 @@ class BreakoutScore:
                 "supply_chain": round(self.supply_chain, 1),
                 "risk": round(self.risk, 1),
                 "trend": round(self.trend, 1),
-            }
+            },
         }
 
 
@@ -157,9 +164,7 @@ class BreakoutScorer:
         s.risk = risk_data["score"]
 
         # 7. 趋势（0-5）：基于品类搜索热度
-        trend_data = self.trends.get_trend(
-            product.category_path or "", product.title
-        )
+        trend_data = self.trends.get_trend(product.category_path or "", product.title)
         s.trend = trend_data["trend_score"]
 
         return s
@@ -177,22 +182,24 @@ class BreakoutScorer:
             score = self.score(p, match, market_data)
             risk_data = self.risk.assess(p)
             trend_data = self.trends.get_trend(p.category_path or "", p.title)
-            results.append({
-                "asin": p.asin,
-                "title": p.title,
-                "rank": p.rank,
-                "price": p.price,
-                "rating": p.rating,
-                "review_count": p.review_count,
-                "brand": p.brand,
-                "category_path": p.category_path,
-                "breakout_score": score.to_dict(),
-                "risk_assessment": risk_data,
-                "trend_data": trend_data,
-                "has_match": match is not None,
-                "match_score": match.score if match else None,
-                "profit_margin": match.estimated_profit_margin if match else None,
-                "recommendation": score.grade,
-            })
+            results.append(
+                {
+                    "asin": p.asin,
+                    "title": p.title,
+                    "rank": p.rank,
+                    "price": p.price,
+                    "rating": p.rating,
+                    "review_count": p.review_count,
+                    "brand": p.brand,
+                    "category_path": p.category_path,
+                    "breakout_score": score.to_dict(),
+                    "risk_assessment": risk_data,
+                    "trend_data": trend_data,
+                    "has_match": match is not None,
+                    "match_score": match.score if match else None,
+                    "profit_margin": match.estimated_profit_margin if match else None,
+                    "recommendation": score.grade,
+                }
+            )
         results.sort(key=lambda x: x["breakout_score"]["total"], reverse=True)
         return results

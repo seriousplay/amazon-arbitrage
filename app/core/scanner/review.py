@@ -10,29 +10,38 @@ ReviewWorkflow - 人工审核工作流
 from typing import Dict, List, Optional
 
 from app.models.product import AmazonProduct
-from app.core.scanner import ScanTask, DiscoveredProduct, ProductStatus
 
 
 class ReviewWorkflow:
     """人工审核工作流"""
 
     def __init__(self):
-        self._pending_reviews: Dict[str, List[DiscoveredProduct]] = {}
-        self._review_results: Dict[str, Dict[str, ProductStatus]] = {}
+        # task_id -> list of AmazonProduct
+        self._pending_reviews: Dict[str, List[AmazonProduct]] = {}
+        self._review_results: Dict[str, Dict[str, str]] = {}  # asin -> "approved"/"rejected"
 
-    def submit_for_review(self, task_id: str, products: List[DiscoveredProduct]) -> str:
+    def submit_for_review(self, task_id: str, products: List[AmazonProduct]) -> str:
         """
         提交产品列表进入审核流程
 
         Args:
             task_id: 任务ID
-            products: 待审核产品列表
+            products: 待审核产品列表（可以是 AmazonProduct 或 DiscoveredProduct）
 
         Returns:
             审核批次ID
         """
+        # 兼容 DiscoveredProduct 对象
+        normalized = []
+        for p in products:
+            if hasattr(p, "product"):
+                # DiscoveredProduct 对象，提取内部的 AmazonProduct
+                normalized.append(p.product)
+            else:
+                normalized.append(p)
+
         batch_id = f"batch_{task_id}_{len(self._pending_reviews.get(task_id, []))}"
-        self._pending_reviews[task_id] = products
+        self._pending_reviews[task_id] = normalized
         self._review_results[task_id] = {}
         return batch_id
 
@@ -51,9 +60,8 @@ class ReviewWorkflow:
             return False
 
         for product in self._pending_reviews[task_id]:
-            if product.product.asin == asin:
-                product.status = ProductStatus.APPROVED
-                self._review_results[task_id][asin] = ProductStatus.APPROVED
+            if product.asin == asin:
+                self._review_results[task_id][asin] = "approved"
                 return True
 
         return False
@@ -74,9 +82,8 @@ class ReviewWorkflow:
             return False
 
         for product in self._pending_reviews[task_id]:
-            if product.product.asin == asin:
-                product.status = ProductStatus.REJECTED
-                self._review_results[task_id][asin] = ProductStatus.REJECTED
+            if product.asin == asin:
+                self._review_results[task_id][asin] = "rejected"
                 return True
 
         return False
@@ -91,16 +98,16 @@ class ReviewWorkflow:
         Returns:
             已批准的 AmazonProduct 列表
         """
-        if task_id not in self._pending_reviews:
+        if task_id not in self._review_results:
             return []
 
-        return [
-            p.product
-            for p in self._pending_reviews[task_id]
-            if p.status == ProductStatus.APPROVED
-        ]
+        approved_asins = {
+            asin for asin, status in self._review_results[task_id].items() if status == "approved"
+        }
 
-    def get_pending(self, task_id: str) -> List[DiscoveredProduct]:
+        return [p for p in self._pending_reviews.get(task_id, []) if p.asin in approved_asins]
+
+    def get_pending(self, task_id: str) -> List[AmazonProduct]:
         """
         获取待审核产品列表
 
@@ -108,16 +115,13 @@ class ReviewWorkflow:
             task_id: 任务ID
 
         Returns:
-            待审核的 DiscoveredProduct 列表
+            待审核的 AmazonProduct 列表
         """
         if task_id not in self._pending_reviews:
             return []
 
-        return [
-            p
-            for p in self._pending_reviews[task_id]
-            if p.status == ProductStatus.PENDING
-        ]
+        reviewed_asins = set(self._review_results.get(task_id, {}).keys())
+        return [p for p in self._pending_reviews[task_id] if p.asin not in reviewed_asins]
 
     def get_review_summary(self, task_id: str) -> Optional[dict]:
         """
@@ -135,17 +139,16 @@ class ReviewWorkflow:
         products = self._pending_reviews[task_id]
         results = self._review_results.get(task_id, {})
 
+        approved = sum(1 for status in results.values() if status == "approved")
+        rejected = sum(1 for status in results.values() if status == "rejected")
+        pending = len(products) - approved - rejected
+
         return {
             "total": len(products),
-            "pending": sum(1 for p in products if p.status == ProductStatus.PENDING),
-            "approved": sum(1 for p in products if p.status == ProductStatus.APPROVED),
-            "rejected": sum(1 for p in products if p.status == ProductStatus.REJECTED),
-            "approval_rate": (
-                sum(1 for p in products if p.status == ProductStatus.APPROVED)
-                / len(products)
-                if products
-                else 0.0
-            ),
+            "pending": pending,
+            "approved": approved,
+            "rejected": rejected,
+            "approval_rate": approved / len(products) if products else 0.0,
         }
 
     def clear_task(self, task_id: str) -> None:

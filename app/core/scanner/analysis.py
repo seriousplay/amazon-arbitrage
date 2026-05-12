@@ -9,7 +9,6 @@ AnalysisService - 市场分析服务
 from typing import List, Optional
 
 from app.models.product import AmazonProduct
-from app.core.scanner import ScanTask
 from app.core.breakout_scorer import BreakoutScorer
 from app.core.concentration import MarketConcentrationAnalyzer
 from app.core.newproduct import NewProductAnalyzer
@@ -53,12 +52,14 @@ class AnalysisService:
         results = []
         for product in products:
             score = self.breakout_scorer.calculate_breakout_score(product)
-            results.append({
-                "asin": product.asin,
-                "title": product.title,
-                "breakout_score": score,
-                "is_breakout": score >= 70,
-            })
+            results.append(
+                {
+                    "asin": product.asin,
+                    "title": product.title,
+                    "breakout_score": score,
+                    "is_breakout": score >= 70,
+                }
+            )
         return results
 
     async def analyze_concentration(
@@ -114,10 +115,11 @@ class AnalysisService:
 
         return {
             "total_reviews": sum(r.get("review_count", 0) for r in reviews_data),
-            "average_rating": sum(r.get("rating", 0) for r in reviews_data)
-            / len(reviews_data)
-            if reviews_data
-            else 0,
+            "average_rating": (
+                sum(r.get("rating", 0) for r in reviews_data) / len(reviews_data)
+                if reviews_data
+                else 0
+            ),
             "sentiment": sentiment,
         }
 

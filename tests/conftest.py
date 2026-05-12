@@ -1,6 +1,7 @@
 """
 pytest 共享 fixtures
 """
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -26,6 +27,9 @@ def mock_config():
     c.COMPETITION_WEIGHT = 0.1
     c.DEBUG = False
     c.CAPTCHA_DEBUG = False
+    c.DEFAULT_MATCH_CONCURRENCY = 3
+    c.DEFAULT_MATCH_TIMEOUT = 90
+    c.CAPTCHA_CONFIDENCE_THRESHOLD = 0.8
     return c
 
 

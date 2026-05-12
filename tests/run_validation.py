@@ -3,6 +3,7 @@
 独立验证脚本 — 不依赖外部包（仅需标准库），验证核心代码正确性
 运行: python3 tests/run_validation.py
 """
+
 import sys
 import os
 import ast
@@ -18,9 +19,11 @@ ALL_CHECKS = []
 
 def check(name):
     """装饰器：注册检查项"""
+
     def decorator(fn):
         ALL_CHECKS.append((name, fn))
         return fn
+
     return decorator
 
 
@@ -40,7 +43,9 @@ def run_all():
     print("=" * 60)
     print(f"结果: {TESTS_PASSED} 通过, {TESTS_FAILED} 失败")
 
+
 # ─── 语法检查 ────────────────────────────────────────────
+
 
 @check("所有 .py 文件语法正确")
 def test_all_syntax_valid():
@@ -56,26 +61,38 @@ def test_all_syntax_valid():
     if errors:
         raise AssertionError("\n" + "\n".join(errors[:5]))
 
+
 # ─── 文件存在性 ──────────────────────────────────────────
 
 REQUIRED_FILES = [
-    "app/main.py", "app/config.py",
-    "app/core/__init__.py", "app/core/scanner.py",
-    "app/core/amazon_spider.py", "app/core/alibaba_matcher.py",
+    "app/main.py",
+    "app/config.py",
+    "app/core/__init__.py",
+    "app/core/scanner.py",
+    "app/core/amazon_spider.py",
+    "app/core/alibaba_matcher.py",
     "app/core/scorer.py",
-    "app/models/__init__.py", "app/models/product.py",
-    "app/services/__init__.py", "app/services/storage.py",
-    "app/workers/__init__.py", "app/workers/scanner_worker.py",
+    "app/models/__init__.py",
+    "app/models/product.py",
+    "app/services/__init__.py",
+    "app/services/storage.py",
+    "app/workers/__init__.py",
+    "app/workers/scanner_worker.py",
     "app/api/v1/endpoints/scan.py",
     "app/api/v1/endpoints/results.py",
     "app/api/v1/endpoints/status.py",
-    "app/utils/__init__.py", "app/utils/logger.py",
+    "app/utils/__init__.py",
+    "app/utils/logger.py",
     "app/utils/image_processing.py",
     "infrastructure/docker/Dockerfile",
     "infrastructure/nginx/nginx.conf",
-    "docker-compose.yml", "pyproject.toml", "requirements.txt",
-    ".gitignore", ".env.example",
+    "docker-compose.yml",
+    "pyproject.toml",
+    "requirements.txt",
+    ".gitignore",
+    ".env.example",
 ]
+
 
 @check("必需文件全部存在")
 def test_required_files_exist():
@@ -83,7 +100,9 @@ def test_required_files_exist():
     if missing:
         raise AssertionError(f"缺失: {missing}")
 
+
 # ─── 核心逻辑纯函数验证 ──────────────────────────────────
+
 
 @check("评分算法：高分场景（高价差+高销量+高评分）")
 def test_scorer_high_profit():
@@ -165,10 +184,10 @@ def test_scorer_bounds():
 
     test_cases = [
         # (amazon_price, alibaba_cny, review_count, rating)
-        (100.0, 1.0, 50000, 5.0),     # 极端高分
-        (1.0, 100.0, 0, 0.0),         # 极端低分
-        (30.0, 15.0, 500, 4.0),       # 中等
-        (10.0, 8.0, 50, 3.5),         # 普通
+        (100.0, 1.0, 50000, 5.0),  # 极端高分
+        (1.0, 100.0, 0, 0.0),  # 极端低分
+        (30.0, 15.0, 500, 4.0),  # 中等
+        (10.0, 8.0, 50, 3.5),  # 普通
     ]
 
     for amz_p, ali_cny, reviews, rating in test_cases:
@@ -178,20 +197,33 @@ def test_scorer_bounds():
         margin = (pd / amz_p) * 100 if pd > 0 and amz_p > 0 else 0
         ps = min(100.0, margin)
 
-        if reviews >= 50000: ss = 100.0
-        elif reviews >= 10000: ss = 80.0
-        elif reviews >= 1000: ss = 55.0
-        elif reviews >= 100: ss = 30.0
-        elif reviews > 0: ss = 15.0
-        else: ss = 5.0
+        if reviews >= 50000:
+            ss = 100.0
+        elif reviews >= 10000:
+            ss = 80.0
+        elif reviews >= 1000:
+            ss = 55.0
+        elif reviews >= 100:
+            ss = 30.0
+        elif reviews > 0:
+            ss = 15.0
+        else:
+            ss = 5.0
 
         rs = rating * 20.0
         cs = 80.0  # 默认中等竞争
-        total = ps * price_diff_weight + ss * sales_weight + rs * rating_weight + cs * competition_weight
+        total = (
+            ps * price_diff_weight
+            + ss * sales_weight
+            + rs * rating_weight
+            + cs * competition_weight
+        )
         score = min(100.0, max(0.0, total))
         assert 0 <= score <= 100, f"分数越界: {score} (amz={amz_p}, ali={ali_cny})"
 
+
 # ─── .gitignore 验证 ─────────────────────────────────────
+
 
 @check(".gitignore 包含必要规则")
 def test_gitignore_rules():
@@ -201,7 +233,9 @@ def test_gitignore_rules():
     if missing:
         raise AssertionError(f"缺失规则: {missing}")
 
+
 # ─── pyproject.toml 验证 ─────────────────────────────────
+
 
 @check("pyproject.toml 配置完整")
 def test_pyproject_config():
@@ -211,7 +245,9 @@ def test_pyproject_config():
     assert "pytest" in content
     assert "[tool.pytest.ini_options]" in content
 
+
 # ─── Docker 配置验证 ─────────────────────────────────────
+
 
 @check("docker-compose.yml 语法基本正确")
 def test_docker_compose():
@@ -223,6 +259,7 @@ def test_docker_compose():
     # 不应出现硬编码的绝对路径
     assert "/Users/" not in content, "不应包含硬编码用户路径"
 
+
 @check("Dockerfile 无冗余 playwright 安装")
 def test_dockerfile_no_duplicate():
     dockerfile = (PROJECT_ROOT / "infrastructure/docker/Dockerfile").read_text()
@@ -231,7 +268,9 @@ def test_dockerfile_no_duplicate():
     playwright_installs = [l for l in lines if "pip install" in l and "playwright" in l]
     assert len(playwright_installs) <= 1, f"playwright 被多次安装: {playwright_installs}"
 
+
 # ─── 安全检查 ────────────────────────────────────────────
+
 
 @check("无硬编码密钥或敏感信息")
 def test_no_hardcoded_secrets():
@@ -245,7 +284,9 @@ def test_no_hardcoded_secrets():
                 # config.py 和 .env.example 允许包含配置字段名
                 pass  # 仅对非配置文件的硬编码敏感信息报警
 
+
 # ─── 架构检查 ────────────────────────────────────────────
+
 
 @check("API 端点无循环导入 app.main")
 def test_no_circular_import():
@@ -253,8 +294,10 @@ def test_no_circular_import():
         filepath = PROJECT_ROOT / "app/api/v1/endpoints" / endpoint
         if filepath.exists():
             content = filepath.read_text()
-            assert "from app.main import app" not in content, \
-                f"{endpoint} 包含循环导入 from app.main"
+            assert (
+                "from app.main import app" not in content
+            ), f"{endpoint} 包含循环导入 from app.main"
+
 
 @check("config.py 无模块级副作用")
 def test_config_no_side_effects():
@@ -272,14 +315,19 @@ def test_config_no_side_effects():
         if "os.makedirs" in line and not in_function:
             raise AssertionError("os.makedirs 在模块顶层调用（应在 ensure_directories 内）")
 
+
 # ─── 模型逻辑验证 ────────────────────────────────────────
+
 
 @check("MatchResult confidence_level 计算正确")
 def test_confidence_level():
     """验证 confidence 计算逻辑"""
+
     def calc_confidence(score):
-        if score >= 80: return "high"
-        elif score >= 60: return "medium"
+        if score >= 80:
+            return "high"
+        elif score >= 60:
+            return "medium"
         return "low"
 
     assert calc_confidence(90) == "high"

@@ -1,6 +1,7 @@
 """
 应用内定时任务调度器 — 支持每日/每周自动扫描
 """
+
 import asyncio
 import json
 import time
@@ -48,8 +49,13 @@ class InAppScheduler:
                 "day": 1,  # Monday=1
                 "hour": 9,
                 "minute": 0,
-                "categories": ["Pet Supplies", "Electronics", "Sports & Outdoors",
-                               "Home & Kitchen", "Beauty & Personal Care"],
+                "categories": [
+                    "Pet Supplies",
+                    "Electronics",
+                    "Sports & Outdoors",
+                    "Home & Kitchen",
+                    "Beauty & Personal Care",
+                ],
                 "max_products": 15,
                 "description": "每周一早上 9:00 自动扫描核心品类",
             }

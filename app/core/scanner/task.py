@@ -11,6 +11,9 @@ import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
 
+# 向后兼容：重新导出 ScanTask
+from app.core.scanner.models import ScanTask
+
 
 class TaskManager:
     """管理扫描任务的内存状态"""
@@ -21,19 +24,15 @@ class TaskManager:
         self._global_lock = asyncio.Lock()
 
     def create_task(self, category: str, max_products: int) -> "ScanTask":
-        """
-        创建新扫描任务
-
-        Args:
-            category: 产品类目
-            max_products: 最大发现产品数
-
-        Returns:
-            新创建的 ScanTask
-        """
+        """创建新扫描任务"""
         from app.core.scanner import ScanTask
 
-        task_id = f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{id(self)}"
+        # 使用递增计数器确保唯一性
+        if not hasattr(self, "_task_counter"):
+            self._task_counter = 0
+        self._task_counter += 1
+
+        task_id = f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self._task_counter}"
         task = ScanTask(
             task_id=task_id,
             category=category,
@@ -52,26 +51,13 @@ class TaskManager:
         return list(self._tasks.values())
 
     def update_task(self, task: "ScanTask") -> None:
-        """
-        更新任务状态
-
-        Args:
-            task: 要更新的任务（必须是已存在的任务）
-        """
+        """更新任务状态"""
         if task.task_id not in self._tasks:
             raise KeyError(f"Task {task.task_id} not found")
         self._tasks[task.task_id] = task
 
     def cancel_task(self, task_id: str) -> bool:
-        """
-        取消任务
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            True 如果任务成功取消，False 如果任务不存在或已完成
-        """
+        """取消任务"""
         task = self._tasks.get(task_id)
         if task is None:
             return False
@@ -85,30 +71,14 @@ class TaskManager:
         return True
 
     async def acquire_lock(self, task_id: str) -> asyncio.Lock:
-        """
-        获取任务锁（用于并发控制）
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            任务的 asyncio.Lock
-        """
+        """获取任务锁（用于并发控制）"""
         async with self._global_lock:
             if task_id not in self._locks:
                 self._locks[task_id] = asyncio.Lock()
             return self._locks[task_id]
 
     def get_task_summary(self, task_id: str) -> Optional[dict]:
-        """
-        获取任务摘要信息
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            任务摘要字典，如果任务不存在则返回 None
-        """
+        """获取任务摘要信息"""
         task = self._tasks.get(task_id)
         if task is None:
             return None

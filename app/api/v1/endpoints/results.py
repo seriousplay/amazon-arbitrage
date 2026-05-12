@@ -1,6 +1,7 @@
 """
 结果 / 品类 / 调试 API
 """
+
 from fastapi import APIRouter, HTTPException, Query, Request
 
 router = APIRouter(prefix="/results", tags=["结果/品类/调试"])
@@ -48,9 +49,9 @@ async def get_task(request: Request, task_id: str):
     return {
         **task.to_summary(),
         "products": products,
-        "breakout_results": task.breakout_results if hasattr(task, 'breakout_results') else [],
-        "concentration_result": getattr(task, 'concentration_result', None),
-        "new_product_analysis": getattr(task, 'new_product_analysis', None),
+        "breakout_results": task.breakout_results if hasattr(task, "breakout_results") else [],
+        "concentration_result": getattr(task, "concentration_result", None),
+        "new_product_analysis": getattr(task, "new_product_analysis", None),
         "login_status": scanner.alibaba_matcher.login_status,
     }
 
@@ -87,15 +88,19 @@ async def debug_search(request: Request, keyword: str = Query(...)):
         products = await scanner.test_1688_search(keyword)
     except Exception as e:
         return {
-            "keyword": keyword, "count": 0, "error": str(e),
+            "keyword": keyword,
+            "count": 0,
+            "error": str(e),
             "login_status": scanner.alibaba_matcher.login_status,
             "cookies_loaded": scanner.alibaba_matcher._has_cookies,
         }
 
-    debug = getattr(scanner.alibaba_matcher, '_last_debug', {})
+    debug = getattr(scanner.alibaba_matcher, "_last_debug", {})
     return {
-        "keyword": keyword, "count": len(products),
+        "keyword": keyword,
+        "count": len(products),
         "login_status": scanner.alibaba_matcher.login_status,
         "cookies_loaded": scanner.alibaba_matcher._has_cookies,
-        "products": products, "diagnostic": debug,
+        "products": products,
+        "diagnostic": debug,
     }

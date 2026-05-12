@@ -12,10 +12,17 @@ import asyncio
 from typing import List, Optional
 
 from app.models.product import AmazonProduct, AlibabaProduct, MatchResult
-from app.core.scanner import ScanTask, DiscoveredProduct, ProductStatus
 from app.core.scorer import MatchScorer
 from app.core.alibaba_matcher import AlibabaMatcher
 from app.config import settings
+
+
+# 延迟导入以避免循环依赖
+def _get_scanner_types():
+    """从旧 scanner 模块获取类型（延迟导入）"""
+    from app.core.scanner import ScanTask, DiscoveredProduct, ProductStatus
+
+    return ScanTask, DiscoveredProduct, ProductStatus
 
 
 class MatchingService:
@@ -38,13 +45,11 @@ class MatchingService:
         self.matcher = matcher
         self.scorer = scorer
         self.config = config
-        self._semaphore = asyncio.Semaphore(
-            getattr(config, 'DEFAULT_MATCH_CONCURRENCY', 3)
-        )
+        self._semaphore = asyncio.Semaphore(getattr(config, "DEFAULT_MATCH_CONCURRENCY", 3))
 
     async def match_products(
         self,
-        task: ScanTask,
+        task,  # 使用延迟导入的类型，见 _get_scanner_types()
         products: List[AmazonProduct],
     ) -> List[MatchResult]:
         """
@@ -57,6 +62,9 @@ class MatchingService:
         Returns:
             匹配结果列表
         """
+        # 延迟导入类型
+        ScanTask, DiscoveredProduct, ProductStatus = _get_scanner_types()
+
         results = []
 
         # 并发匹配（受信号量控制）
@@ -73,7 +81,7 @@ class MatchingService:
                         return None
 
                     # 计算匹配分数
-                    match_result = self.scorer.calculate_score(
+                    match_result = self.scorer.score_match(
                         amazon=product,
                         alibaba=alibaba_product,
                     )
@@ -83,9 +91,8 @@ class MatchingService:
                 except Exception as e:
                     # 记录错误但不中断整个批次
                     import logging
-                    logging.getLogger(__name__).error(
-                        f"匹配失败 {product.asin}: {e}"
-                    )
+
+                    logging.getLogger(__name__).error(f"匹配失败 {product.asin}: {e}")
                     return None
 
         # 并发执行所有匹配任务
@@ -136,14 +143,13 @@ class MatchingService:
                 if alibaba_product is None:
                     return None
 
-                return self.scorer.calculate_score(
+                return self.scorer.score_match(
                     amazon=product,
                     alibaba=alibaba_product,
                 )
 
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).error(
-                    f"匹配失败 {product.asin}: {e}"
-                )
+
+                logging.getLogger(__name__).error(f"匹配失败 {product.asin}: {e}")
                 return None

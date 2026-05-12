@@ -10,10 +10,9 @@ ScanOrchestrator - 扫描工作流协调器
 
 import asyncio
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from app.models.product import AmazonProduct, MatchResult
-from app.core.scanner import ScanTask
 from app.core.scanner.task import TaskManager
 from app.core.scanner.discovery import DiscoveryService
 from app.core.scanner.matching import MatchingService
@@ -21,6 +20,9 @@ from app.core.scanner.review import ReviewWorkflow
 from app.core.scanner.analysis import AnalysisService
 from app.services.storage import StorageService
 from app.config import settings
+
+if TYPE_CHECKING:
+    from app.core.scanner import ScanTask
 
 
 class ScanOrchestrator:
@@ -150,29 +152,28 @@ class ScanOrchestrator:
                 # 2. 丰富产品信息
                 products = await self.discovery.enrich_products(products)
 
-                # 3. 自动批准或进入人工审核
+                # 3. 保存产品到数据库
+                await self.storage.save_products(task_id, products)
+
+                # 4. 自动批准或进入人工审核
                 if auto_approve:
                     task.approve_all()
                 else:
                     # 进入人工审核流程
-                    batch_id = self.review.submit_for_review(
-                        task_id, task.products
-                    )
+                    batch_id = self.review.submit_for_review(task_id, task.products)
                     task.status = "awaiting_review"
                     task.current_step = f" awaiting_review_batch_{batch_id}"
                     return
 
-                # 4. 匹配 1688
+                # 5. 匹配 1688
                 task.phase = "match"
                 task.status = "running"
                 task.current_step = "matching_products"
 
                 approved_products = task.get_approved_products()
-                match_results = await self.matching.match_products(
-                    task, approved_products
-                )
+                match_results = await self.matching.match_products(task, approved_products)
 
-                # 5. 保存结果
+                # 6. 保存匹配结果
                 if match_results:
                     await self.storage.save_match_results(task_id, match_results)
 
@@ -274,15 +275,13 @@ class ScanOrchestrator:
                 task.status = "running"
                 task.current_step = "matching_products"
 
-                match_results = await self.matching.match_products(
-                    task, approved_products
-                )
+                match_results = await self.matching.match_products(task, approved_products)
 
                 if match_results:
                     await self.storage.save_match_results(task_id, match_results)
 
                 # 可选：执行市场分析
-                if getattr(self.config, 'ENABLE_ANALYSIS', True):
+                if getattr(self.config, "ENABLE_ANALYSIS", True):
                     task.phase = "analysis"
                     task.current_step = "analyzing_market"
 

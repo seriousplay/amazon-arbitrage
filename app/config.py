@@ -2,10 +2,10 @@
 配置管理 - 使用 Pydantic Settings 管理环境变量
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
-from typing import Optional
 import os
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -24,87 +24,42 @@ class Settings(BaseSettings):
 
     # 数据库配置
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///data/arbitrage.db",
-        description="数据库连接字符串"
+        default="sqlite+aiosqlite:///data/arbitrage.db", description="数据库连接字符串"
     )
 
     # Playwright 配置
-    PLAYWRIGHT_HEADLESS: bool = Field(
-        default=False,
-        description="是否无头模式运行浏览器"
-    )
-    PLAYWRIGHT_TIMEOUT: int = Field(
-        default=30000,
-        description="页面加载超时（毫秒）"
-    )
-    BROWSER_CONCURRENCY: int = Field(
-        default=2,
-        description="浏览器并发数"
-    )
+    PLAYWRIGHT_HEADLESS: bool = Field(default=False, description="是否无头模式运行浏览器")
+    PLAYWRIGHT_TIMEOUT: int = Field(default=30000, description="页面加载超时（毫秒）")
+    BROWSER_CONCURRENCY: int = Field(default=2, description="浏览器并发数")
 
     # 爬虫配置
-    REQUEST_DELAY_MIN: float = Field(
-        default=2.0,
-        description="请求最小延迟（秒）"
-    )
-    REQUEST_DELAY_MAX: float = Field(
-        default=5.0,
-        description="请求最大延迟（秒）"
-    )
-    AMAZON_BSR_PAGES: int = Field(
-        default=1,
-        description="Amazon BSR 爬取页数"
-    )
-    ALIBABA_MAX_PAGES: int = Field(
-        default=3,
-        description="1688 搜索最大页数"
-    )
+    REQUEST_DELAY_MIN: float = Field(default=2.0, description="请求最小延迟（秒）")
+    REQUEST_DELAY_MAX: float = Field(default=5.0, description="请求最大延迟（秒）")
+    AMAZON_BSR_PAGES: int = Field(default=1, description="Amazon BSR 爬取页数")
+    ALIBABA_MAX_PAGES: int = Field(default=3, description="1688 搜索最大页数")
 
     # 滑块破解配置
-    SLIDER_MAX_RETRIES: int = Field(
-        default=3,
-        description="滑块破解最大重试次数"
+    SLIDER_MAX_RETRIES: int = Field(default=3, description="滑块破解最大重试次数")
+    SLIDER_USE_VISION: bool = Field(default=True, description="启用纯视觉检测")
+    CAPTCHA_DEBUG: bool = Field(default=True, description="保存调试截图")
+    CAPTCHA_CONFIDENCE_THRESHOLD: float = Field(
+        default=0.8, description="滑块匹配置信度阈值（0-1）"
     )
-    SLIDER_USE_VISION: bool = Field(
-        default=True,
-        description="启用纯视觉检测"
-    )
-    CAPTCHA_DEBUG: bool = Field(
-        default=True,
-        description="保存调试截图"
-    )
+
+    # 匹配配置
+    DEFAULT_MATCH_CONCURRENCY: int = Field(default=3, description="匹配任务默认并发数")
+    DEFAULT_MATCH_TIMEOUT: int = Field(default=90, description="单个匹配任务超时（秒）")
 
     # 评分配置
-    MIN_SCORE_FOR_RECOMMENDATION: int = Field(
-        default=60,
-        description="推荐商品最低分数"
-    )
-    PRICE_DIFF_WEIGHT: float = Field(
-        default=0.4,
-        description="价差权重"
-    )
-    SALES_WEIGHT: float = Field(
-        default=0.3,
-        description="销量权重"
-    )
-    RATING_WEIGHT: float = Field(
-        default=0.2,
-        description="评分权重"
-    )
-    COMPETITION_WEIGHT: float = Field(
-        default=0.1,
-        description="竞争度权重"
-    )
+    MIN_SCORE_FOR_RECOMMENDATION: int = Field(default=60, description="推荐商品最低分数")
+    PRICE_DIFF_WEIGHT: float = Field(default=0.4, description="价差权重")
+    SALES_WEIGHT: float = Field(default=0.3, description="销量权重")
+    RATING_WEIGHT: float = Field(default=0.2, description="评分权重")
+    COMPETITION_WEIGHT: float = Field(default=0.1, description="竞争度权重")
 
     # 并发控制
-    MAX_WORKERS: int = Field(
-        default=2,
-        description="后台 worker 最大数量"
-    )
-    TASK_TIMEOUT: int = Field(
-        default=600,
-        description="任务超时（秒）"
-    )
+    MAX_WORKERS: int = Field(default=2, description="后台 worker 最大数量")
+    TASK_TIMEOUT: int = Field(default=600, description="任务超时（秒）")
 
     # 路径配置
     DATA_DIR: str = Field(default="data", description="数据目录")
@@ -113,9 +68,7 @@ class Settings(BaseSettings):
     OUTPUT_DIR: str = Field(default="data/output", description="输出目录")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=True
     )
 
 

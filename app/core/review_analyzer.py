@@ -24,11 +24,29 @@ logger = get_logger(__name__)
 DEFECT_KEYWORDS = {
     "quality": {
         "keywords": [
-            "cheap", "flimsy", "poor quality", "falls apart", "broken",
-            "defective", "waste of money", "not durable", "cheaply made",
-            "low quality", "broke", "cracked", "tear", "rip", "leak",
-            "stopped working", "doesn't work", "malfunction", "defect",
-            "劣质", "质量差", "易坏", "破损",
+            "cheap",
+            "flimsy",
+            "poor quality",
+            "falls apart",
+            "broken",
+            "defective",
+            "waste of money",
+            "not durable",
+            "cheaply made",
+            "low quality",
+            "broke",
+            "cracked",
+            "tear",
+            "rip",
+            "leak",
+            "stopped working",
+            "doesn't work",
+            "malfunction",
+            "defect",
+            "劣质",
+            "质量差",
+            "易坏",
+            "破损",
         ],
         "label": "质量缺陷",
         "severity": "高",
@@ -36,9 +54,19 @@ DEFECT_KEYWORDS = {
     },
     "size_fit": {
         "keywords": [
-            "too small", "too big", "runs small", "runs large",
-            "doesn't fit", "wrong size", "size chart", "inaccurate sizing",
-            "tight", "loose", "尺寸不对", "偏小", "偏大",
+            "too small",
+            "too big",
+            "runs small",
+            "runs large",
+            "doesn't fit",
+            "wrong size",
+            "size chart",
+            "inaccurate sizing",
+            "tight",
+            "loose",
+            "尺寸不对",
+            "偏小",
+            "偏大",
         ],
         "label": "尺寸/版型问题",
         "severity": "中",
@@ -46,9 +74,19 @@ DEFECT_KEYWORDS = {
     },
     "durability": {
         "keywords": [
-            "lasted", "only lasted", "a few weeks", "a few months",
-            "wore out", "faded", "peeling", "cracking", "rust",
-            "不结实", "不耐用", "褪色", "掉色",
+            "lasted",
+            "only lasted",
+            "a few weeks",
+            "a few months",
+            "wore out",
+            "faded",
+            "peeling",
+            "cracking",
+            "rust",
+            "不结实",
+            "不耐用",
+            "褪色",
+            "掉色",
         ],
         "label": "耐久性不足",
         "severity": "高",
@@ -56,9 +94,15 @@ DEFECT_KEYWORDS = {
     },
     "functionality": {
         "keywords": [
-            "doesn't work", "not as described", "doesn't do",
-            "useless", "not effective", "does nothing",
-            "功能不符", "没用", "效果差",
+            "doesn't work",
+            "not as described",
+            "doesn't do",
+            "useless",
+            "not effective",
+            "does nothing",
+            "功能不符",
+            "没用",
+            "效果差",
         ],
         "label": "功能不符",
         "severity": "高",
@@ -66,9 +110,17 @@ DEFECT_KEYWORDS = {
     },
     "design": {
         "keywords": [
-            "poor design", "bad design", "awkward", "uncomfortable",
-            "unstable", "tips over", "falls over", "hard to use",
-            "设计缺陷", "不好用", "不穩",
+            "poor design",
+            "bad design",
+            "awkward",
+            "uncomfortable",
+            "unstable",
+            "tips over",
+            "falls over",
+            "hard to use",
+            "设计缺陷",
+            "不好用",
+            "不穩",
         ],
         "label": "设计缺陷",
         "severity": "中",
@@ -76,9 +128,15 @@ DEFECT_KEYWORDS = {
     },
     "assembly": {
         "keywords": [
-            "hard to assemble", "difficult to install", "instructions",
-            "confusing", "missing parts", "hard to put together",
-            "安装困难", "说明书不清楚", "缺少零件",
+            "hard to assemble",
+            "difficult to install",
+            "instructions",
+            "confusing",
+            "missing parts",
+            "hard to put together",
+            "安装困难",
+            "说明书不清楚",
+            "缺少零件",
         ],
         "label": "安装/组装困难",
         "severity": "中",
@@ -86,9 +144,17 @@ DEFECT_KEYWORDS = {
     },
     "material": {
         "keywords": [
-            "cheap material", "bad material", "plastic", "thin",
-            "material feels", "chemical smell", "odor", "smell",
-            "气味大", "材质差", "塑料感",
+            "cheap material",
+            "bad material",
+            "plastic",
+            "thin",
+            "material feels",
+            "chemical smell",
+            "odor",
+            "smell",
+            "气味大",
+            "材质差",
+            "塑料感",
         ],
         "label": "材质/气味问题",
         "severity": "中",
@@ -96,8 +162,14 @@ DEFECT_KEYWORDS = {
     },
     "customer_service": {
         "keywords": [
-            "customer service", "refund", "return", "no response",
-            "not helpful", "wouldn't help", "客服差", "不退货",
+            "customer service",
+            "refund",
+            "return",
+            "no response",
+            "not helpful",
+            "wouldn't help",
+            "客服差",
+            "不退货",
         ],
         "label": "售后/客服问题",
         "severity": "低",
@@ -105,8 +177,12 @@ DEFECT_KEYWORDS = {
     },
     "packaging": {
         "keywords": [
-            "packaging", "damaged in", "box was", "包装破损",
-            "包装简陋", "收到时已",
+            "packaging",
+            "damaged in",
+            "box was",
+            "包装破损",
+            "包装简陋",
+            "收到时已",
         ],
         "label": "包装/物流损坏",
         "severity": "低",
@@ -114,8 +190,12 @@ DEFECT_KEYWORDS = {
     },
     "color_appearance": {
         "keywords": [
-            "color different", "not the color", "looks nothing",
-            "different from picture", "颜色不对", "色差",
+            "color different",
+            "not the color",
+            "looks nothing",
+            "different from picture",
+            "颜色不对",
+            "色差",
             "与图片不符",
         ],
         "label": "色差/外观不符",
@@ -124,8 +204,15 @@ DEFECT_KEYWORDS = {
     },
     "safety": {
         "keywords": [
-            "dangerous", "hazard", "sharp", "choking", "burn",
-            "shock", "fire", "安全", "危险",
+            "dangerous",
+            "hazard",
+            "sharp",
+            "choking",
+            "burn",
+            "shock",
+            "fire",
+            "安全",
+            "危险",
         ],
         "label": "安全隐患",
         "severity": "高",
@@ -135,23 +222,86 @@ DEFECT_KEYWORDS = {
 
 # 停用词（分析时过滤）
 STOP_WORDS = {
-    "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "as", "is", "was", "are", "were", "be",
-    "been", "being", "have", "has", "had", "do", "does", "did", "will",
-    "would", "could", "should", "may", "might", "i", "me", "my", "we",
-    "our", "you", "your", "it", "its", "they", "them", "their", "this",
-    "that", "these", "those", "not", "no", "very", "so", "too", "just",
-    "really", "also", "even", "still", "only", "very", "much", "more",
-    "产品", "这个", "那个", "非常", "很", "不", "了", "的",
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "but",
+    "in",
+    "on",
+    "at",
+    "to",
+    "for",
+    "of",
+    "with",
+    "by",
+    "from",
+    "as",
+    "is",
+    "was",
+    "are",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+    "i",
+    "me",
+    "my",
+    "we",
+    "our",
+    "you",
+    "your",
+    "it",
+    "its",
+    "they",
+    "them",
+    "their",
+    "this",
+    "that",
+    "these",
+    "those",
+    "not",
+    "no",
+    "very",
+    "so",
+    "too",
+    "just",
+    "really",
+    "also",
+    "even",
+    "still",
+    "only",
+    "very",
+    "much",
+    "more",
+    "产品",
+    "这个",
+    "那个",
+    "非常",
+    "很",
+    "不",
+    "了",
+    "的",
 }
 
 
 class ReviewAnalyzer:
     """差评分析器 — 规则驱动的关键词聚类"""
 
-    def analyze_product(
-        self, asin: str, title: str, reviews: List[ReviewItem]
-    ) -> ReviewAnalysis:
+    def analyze_product(self, asin: str, title: str, reviews: List[ReviewItem]) -> ReviewAnalysis:
         """对单个产品的差评进行分析"""
         if not reviews:
             return self._empty_result(asin, title)
@@ -163,7 +313,8 @@ class ReviewAnalyzer:
 
         if neg_count == 0:
             return ReviewAnalysis(
-                asin=asin, title=title,
+                asin=asin,
+                title=title,
                 total_reviews_analyzed=total,
                 negative_review_count=0,
                 average_rating=avg_rating,
@@ -193,7 +344,8 @@ class ReviewAnalyzer:
         advice = self._actionable_advice(clusters)
 
         return ReviewAnalysis(
-            asin=asin, title=title,
+            asin=asin,
+            title=title,
             total_reviews_analyzed=total,
             negative_review_count=neg_count,
             average_rating=avg_rating,
@@ -293,19 +445,20 @@ class ReviewAnalyzer:
         parts = []
         for c in top3:
             pct = (c.count / max(sum(x.count for x in clusters), 1)) * 100
-            parts.append(
-                f"【{c.label}】占投诉{pct:.0f}%: {c.improvement_suggestion}"
-            )
+            parts.append(f"【{c.label}】占投诉{pct:.0f}%: {c.improvement_suggestion}")
         return "；".join(parts)
 
     def _empty_result(self, asin: str, title: str) -> ReviewAnalysis:
         return ReviewAnalysis(
-            asin=asin, title=title,
+            asin=asin,
+            title=title,
             total_reviews_analyzed=0,
             negative_review_count=0,
             average_rating=0,
-            clusters=[], top_defect="无数据",
-            overall_rating="未知", actionable_advice="",
+            clusters=[],
+            top_defect="无数据",
+            overall_rating="未知",
+            actionable_advice="",
         )
 
     # ─── 批量分析 ────────────────────────────────────
@@ -365,10 +518,9 @@ class ReviewAnalyzer:
 
         if bad_count > total * 0.5:
             return (
-                '⚠️ 超过一半的产品品控评价为中/差，'
-                '说明该类目存在普遍的质量问题，'
-                '如果能针对性解决以下共性问题，将是很好的切入机会: '
-                + "；".join(cross_cutting[:3])
+                "⚠️ 超过一半的产品品控评价为中/差，"
+                "说明该类目存在普遍的质量问题，"
+                "如果能针对性解决以下共性问题，将是很好的切入机会: " + "；".join(cross_cutting[:3])
             )
         elif good_count > total * 0.7:
             return (
