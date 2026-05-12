@@ -75,7 +75,8 @@ async def get_latest(request: Request, limit: int = 20):
     storage = request.app.state.storage
     if not storage:
         return {"results": [], "count": 0}
-    return {"results": await storage.list_recent_tasks(limit), "count": limit}
+    results = await storage.list_recent_tasks(limit)
+    return {"results": results, "count": len(results)}
 
 
 @router.get("/debug-search")

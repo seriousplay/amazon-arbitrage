@@ -11,13 +11,25 @@ class MatchScorer:
     def __init__(self, config):
         self.config = config
 
+    def _float_config(self, *names: str, default: float) -> float:
+        for name in names:
+            value = getattr(self.config, name, None)
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, str):
+                try:
+                    return float(value)
+                except ValueError:
+                    pass
+        return default
+
     @property
     def cny_rate(self) -> float:
-        return getattr(self.config, 'cny_to_usd', 0.14) or 0.14
+        return self._float_config("CNY_TO_USD", "cny_to_usd", default=0.14)
 
     @property
     def cost_mul(self) -> float:
-        return getattr(self.config, 'cost_multiplier', 1.25) or 1.25
+        return self._float_config("COST_MULTIPLIER", "cost_multiplier", default=1.25)
 
     def score_match(
         self, amazon: AmazonProduct, alibaba: AlibabaProduct

@@ -23,7 +23,11 @@ COOKIE_FILE = (
 
 
 class AlibabaMatcher:
-    """1688 匹配器 — Playwright 渲染页面，提取 JS 加载的商品数据"""
+    """1688 匹配器 — Playwright 渲染页面，提取 JS 加载的商品数据
+
+    浏览器全局单例：所有搜索复用同一个 Chromium 实例，避免重复启停。
+    使用 asyncio.Semaphore(1) 控制浏览器并发，一次只允许一个搜索任务使用浏览器。
+    """
 
     def __init__(self, config):
         self.config = config
@@ -31,14 +35,55 @@ class AlibabaMatcher:
         self._last_debug: dict = {}
         self._playwright = None
         self._browser = None
+        self._browser_context = None
+        # 浏览器并发锁：一次只允许一个任务使用浏览器
+        self._browser_semaphore = asyncio.Semaphore(1)
+        # 启动锁：防止多个协程同时尝试初始化浏览器
+        self._browser_lock = asyncio.Lock()
 
         if self._has_cookies:
-            logger.info("✓ 1688 匹配器就绪（cookies 已找到）")
+            logger.info("✓ 1688 匹配器就绪（cookies 已找到，浏览器按需启动）")
         else:
             logger.warning(
                 f"⚠ 1688 cookies 未找到: {COOKIE_FILE}\n"
                 "  运行 python scripts/save_1688_cookies.py 获取 cookies"
             )
+
+    async def _ensure_browser(self):
+        """惰性初始化浏览器（全局单例，只启动一次）"""
+        if self._browser is not None:
+            return
+        async with self._browser_lock:
+            if self._browser is not None:
+                return  # 双重检查
+            from playwright.async_api import async_playwright
+            self._playwright = await async_playwright().start()
+            self._browser = await self._playwright.chromium.launch(
+                headless=True,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-infobars",
+                    "--disable-dev-shm-usage",
+                ],
+            )
+            # 创建持久上下文（加载 cookies）
+            self._browser_context = await self._browser.new_context(
+                viewport={"width": 1440, "height": 900},
+                locale="zh-CN",
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/124.0.0.0 Safari/537.36"
+                ),
+            )
+            if self._has_cookies:
+                cookies = json.loads(COOKIE_FILE.read_text())
+                if isinstance(cookies, list):
+                    await self._browser_context.add_cookies(cookies)
+            logger.info("✓ Playwright 浏览器已启动（全局单例）")
 
     # ─── 公开 ─────────────────────────────────────────────
 
@@ -216,9 +261,15 @@ class AlibabaMatcher:
     # ─── 搜索核心 ─────────────────────────────────────────
 
     async def _search(self, keyword: str) -> List[PydanticAlibabaProduct]:
-        """Playwright 渲染 1688 移动端搜索页并提取商品数据"""
+        """搜索 1688 — 复用全局浏览器实例，避免重复启停"""
+
+        # 获取浏览器信号量（一次只允许一个搜索用浏览器）
+        async with self._browser_semaphore:
+            return await self._search_impl(keyword)
+
+    async def _search_impl(self, keyword: str) -> List[PydanticAlibabaProduct]:
+        """Playwright 渲染 1688 移动端搜索页并提取商品数据（实际执行）"""
         encoded = quote_plus(keyword)
-        # 移动端搜索，反爬保护比 PC 端轻
         url = f"https://m.1688.com/offer_search/-{encoded}.html?keywords={encoded}"
 
         self._last_debug = {"keyword": keyword, "url": url}
@@ -230,159 +281,127 @@ class AlibabaMatcher:
             return []
 
         try:
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--disable-features=IsolateOrigins,site-per-process",
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-infobars",
-                        "--disable-dev-shm-usage",
-                    ],
-                )
-                context = await browser.new_context(
-                    viewport={"width": 1440, "height": 900},
-                    locale="zh-CN",
-                    user_agent=(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/124.0.0.0 Safari/537.36"
-                    ),
-                )
+            # 确保浏览器已启动（全局单例）
+            await self._ensure_browser()
 
-                # 加载 cookies
-                cookies = json.loads(COOKIE_FILE.read_text())
-                if isinstance(cookies, list):
-                    await context.add_cookies(cookies)
+            # 从持久上下文创建新页面
+            page = await self._browser_context.new_page()
 
-                page = await context.new_page()
+            # 隐藏 webdriver 痕迹
+            await page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+                Object.defineProperty(navigator, 'languages', {get: () => ['zh-CN', 'zh', 'en']});
+                window.chrome = {runtime: {}};
+            """)
 
-                # 隐藏 webdriver 痕迹
-                await page.add_init_script("""
-                    Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-                    Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
-                    Object.defineProperty(navigator, 'languages', {get: () => ['zh-CN', 'zh', 'en']});
-                    window.chrome = {runtime: {}};
-                """)
+            self._last_debug["status"] = "navigating"
+            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
-                self._last_debug["status"] = "navigating"
-                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            # 等待搜索结果加载
+            await asyncio.sleep(4)
 
-                # 等待搜索结果加载
-                await asyncio.sleep(4)
+            # 诊断：页面基本信息
+            diag = await page.evaluate("""() => ({
+                title: document.title,
+                offerIdCount: document.querySelectorAll('[data-offer-id]').length,
+                offerLinks: document.querySelectorAll('a[href*="offer"]').length,
+                bodyLen: document.body ? document.body.innerText.length : 0,
+                hasPrice: (document.body ? document.body.innerText : '').includes('¥'),
+            })""")
+            self._last_debug["page_diag"] = diag
 
-                # 诊断：页面基本信息
-                diag = await page.evaluate("""() => ({
-                    title: document.title,
-                    offerIdCount: document.querySelectorAll('[data-offer-id]').length,
-                    offerLinks: document.querySelectorAll('a[href*="offer"]').length,
-                    bodyLen: document.body ? document.body.innerText.length : 0,
-                    hasPrice: (document.body ? document.body.innerText : '').includes('¥'),
-                })""")
-                self._last_debug["page_diag"] = diag
+            # 检测验证码
+            if "验证码" in (diag.get("title") or ""):
+                self._last_debug["blocked"] = "验证码拦截"
+                logger.warning("1688 触发验证码，请稍后重试或更换 IP")
+                await page.close()
+                return []
 
-                # 检测验证码
-                if "验证码" in (diag.get("title") or ""):
-                    self._last_debug["blocked"] = "验证码拦截"
-                    logger.warning("1688 触发验证码，请稍后重试或更换 IP")
-                    await browser.close()
-                    return []
+            # 在页面中执行 JS 提取商品数据
+            raw_data = await page.evaluate("""() => {
+                const results = [], seen = new Set();
+                const els = document.querySelectorAll(
+                    'a[href*="/offer/"], [data-offer-id], a[href*="offerId"]'
+                );
+                els.forEach(el => {
+                    let oid = el.getAttribute('data-offer-id') || '';
+                    if (!oid) {
+                        const h = el.href || el.getAttribute('href') || '';
+                        const m = h.match(/offer[\\/](\\d+)/) || h.match(/offerId[=:](\\d+)/);
+                        if (m) oid = m[1];
+                    }
+                    if (!oid || seen.has(oid)) return;
 
-                # 在页面中执行 JS 提取商品数据
-                raw_data = await page.evaluate("""() => {
-                    const results = [], seen = new Set();
-                    const els = document.querySelectorAll(
-                        'a[href*="/offer/"], [data-offer-id], a[href*="offerId"]'
-                    );
-                    els.forEach(el => {
-                        // 提取 offerId
-                        let oid = el.getAttribute('data-offer-id') || '';
-                        if (!oid) {
-                            const h = el.href || el.getAttribute('href') || '';
-                            const m = h.match(/offer[\\/](\\d+)/) || h.match(/offerId[=:](\\d+)/);
-                            if (m) oid = m[1];
-                        }
-                        if (!oid || seen.has(oid)) return;
+                    let card = el;
+                    for (let i=0; i<5; i++) {
+                        card = card.parentElement;
+                        if (!card) break;
+                        const t = (card.innerText||'').trim();
+                        if (t.length > 40 && /[¥￥]/.test(t)) break;
+                    }
+                    const fullText = (card.innerText||'').trim();
+                    if (fullText.length < 25) return;
+                    if (/交流|聊天|语音|扫码|下载APP|导航|分类/.test(fullText)) return;
 
-                        // 找父容器（向上查找，直到遇到包含 ¥ 且有意义的容器）
-                        let card = el;
-                        for (let i=0; i<5; i++) {
-                            card = card.parentElement;
-                            if (!card) break;
-                            const t = (card.innerText||'').trim();
-                            if (t.length > 40 && /[¥￥]/.test(t)) break;
-                        }
-                        const fullText = (card.innerText||'').trim();
-                        if (fullText.length < 25) return;
-                        if (/交流|聊天|语音|扫码|下载APP|导航|分类/.test(fullText)) return;
+                    let price = 0;
+                    const priceEl = card.querySelector('[class*="price"], [class*="Price"], span[class*="num"], em');
+                    const priceText = priceEl ? priceEl.innerText : fullText;
+                    const pm = priceText.match(/[¥￥]\\s*([\\d,.]+)/);
+                    if (pm) price = parseFloat(pm[1].replace(/,/g, ''));
 
-                        // 从容器内专门的 price 元素提取价格，而非全文匹配
-                        let price = 0;
-                        const priceEl = card.querySelector('[class*="price"], [class*="Price"], span[class*="num"], em');
-                        const priceText = priceEl ? priceEl.innerText : fullText;
-                        const pm = priceText.match(/[¥￥]\\s*([\\d,.]+)/);
-                        if (pm) price = parseFloat(pm[1].replace(/,/g, ''));
+                    if (!price) {
+                        const allPM = [...fullText.matchAll(/[¥￥]\\s*([\\d,.]+)/g)];
+                        if (allPM.length >= 2) price = parseFloat(allPM[1][1].replace(/,/g, ''));
+                        else if (allPM.length === 1) price = parseFloat(allPM[0][1].replace(/,/g, ''));
+                    }
+                    if (!price || price <= 0) return;
 
-                        // 如果从 price 元素没找到，尝试全文匹配第二个 ¥（第一个可能是广告标签）
-                        if (!price) {
-                            const allPM = [...fullText.matchAll(/[¥￥]\\s*([\\d,.]+)/g)];
-                            if (allPM.length >= 2) price = parseFloat(allPM[1][1].replace(/,/g, ''));
-                            else if (allPM.length === 1) price = parseFloat(allPM[0][1].replace(/,/g, ''));
-                        }
-                        if (!price || price <= 0) return;
+                    let title = el.getAttribute('title') || el.innerText || '';
+                    title = title.split(/[\\n¥￥]/)[0].trim();
+                    if (!title || title.length < 4) return;
 
-                        let title = el.getAttribute('title') || el.innerText || '';
-                        title = title.split(/[\\n¥￥]/)[0].trim();
-                        if (!title || title.length < 4) return;
-
-                        seen.add(oid);
-                        results.push({
-                            offerId: oid,
-                            title: title.substring(0, 200),
-                            price: price,
-                            moqText: (fullText.match(/[≥>=]\\s*(\\d+)\\s*[件个]/)||['','2'])[1],
-                            supplier: ((card.querySelector('[class*="supplier"], [class*="company"], [class*="shop"]')||{}).innerText||''),
-                        });
+                    seen.add(oid);
+                    results.push({
+                        offerId: oid,
+                        title: title.substring(0, 200),
+                        price: price,
+                        moqText: (fullText.match(/[≥>=]\\s*(\\d+)\\s*[件个]/)||['','2'])[1],
+                        supplier: ((card.querySelector('[class*="supplier"], [class*="company"], [class*="shop"]')||{}).innerText||''),
                     });
-                    return results;
-                }""")
+                });
+                return results;
+            }""")
 
-                await browser.close()
+            await page.close()
 
-                # 转换 JS 提取的数据
-                products = []
-                seen = set()
-                for item in (raw_data or [])[:10]:
-                    oid = str(item.get("offerId", ""))
-                    if oid in seen:
-                        continue
-                    seen.add(oid)
-                    title = item.get("title", "")
-                    price = float(item.get("price", 0))
-                    if not title or price <= 0:
-                        continue
-                    moq = int(item.get("moqText", 2) or 2)
-                    supplier = item.get("supplier", "") or "1688供应商"
-                    # 清理标题中残留的非商品文本
-                    title = re.sub(r"元宝.*|先采后付|回头率.*|退货.*|运费.*|\\+件.*", "", title).strip()
-                    products.append(PydanticAlibabaProduct(
-                        item_id=oid, title=title[:200], price=price,
-                        min_order_qty=max(2, moq),
-                        supplier=supplier[:100] if supplier else "1688供应商",
-                        item_url=f"https://detail.1688.com/offer/{oid}.html",
-                        matched_score=50.0,
-                    ))
+            # 转换 JS 提取的数据
+            products = []
+            seen = set()
+            for item in (raw_data or [])[:10]:
+                oid = str(item.get("offerId", ""))
+                if oid in seen:
+                    continue
+                seen.add(oid)
+                title = item.get("title", "")
+                price = float(item.get("price", 0))
+                if not title or price <= 0:
+                    continue
+                moq = int(item.get("moqText", 2) or 2)
+                supplier = item.get("supplier", "") or "1688供应商"
+                title = re.sub(r"元宝.*|先采后付|回头率.*|退货.*|运费.*|\\+件.*", "", title).strip()
+                products.append(PydanticAlibabaProduct(
+                    item_id=oid, title=title[:200], price=price,
+                    min_order_qty=max(2, moq),
+                    supplier=supplier[:100] if supplier else "1688供应商",
+                    item_url=f"https://detail.1688.com/offer/{oid}.html",
+                    matched_score=50.0,
+                ))
 
-                self._last_debug["found"] = len(products)
-
-                self._last_debug["found"] = len(products)
-                self._last_debug["raw_count"] = len(raw_data or [])
-                logger.info(f"✓ 1688 搜索: {len(products)} 个结果")
-                self._last_debug["found"] = len(products)
-                logger.info(f"✓ 1688 搜索: {len(products)} 个结果")
-                return products
+            self._last_debug["found"] = len(products)
+            self._last_debug["raw_count"] = len(raw_data or [])
+            logger.info(f"✓ 1688 搜索: {len(products)} 个结果")
+            return products
 
         except Exception as e:
             import traceback
@@ -748,4 +767,24 @@ class AlibabaMatcher:
 
 
     async def cleanup(self):
-        pass
+        """关闭全局浏览器实例（应用退出时调用）"""
+        if self._browser_context:
+            try:
+                await self._browser_context.close()
+            except Exception:
+                pass
+            self._browser_context = None
+        if self._browser:
+            try:
+                await self._browser.close()
+            except Exception:
+                pass
+            self._browser = None
+        if self._playwright:
+            try:
+                await self._playwright.stop()
+            except Exception:
+                pass
+            self._playwright = None
+        if self._browser or self._playwright:
+            logger.info("✓ Playwright 浏览器已关闭")

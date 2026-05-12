@@ -2,7 +2,7 @@
 匹配评分引擎测试
 """
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from app.models.product import AmazonProduct, AlibabaProduct
 from app.core.scorer import MatchScorer
@@ -86,3 +86,38 @@ class TestMatchScorer:
         alibaba = AlibabaProduct(item_id="500", title="T", price=1.0, min_order_qty=1, matched_score=100.0)
         result = scorer.score_match(amazon, alibaba)
         assert 0 <= result.score <= 100
+
+
+@pytest.mark.asyncio
+async def test_parallel_matching_returns_match_results(config, mock_storage):
+    """批量匹配应返回可落库的 MatchResult，而不是裸 1688 商品。"""
+    from app.core.scanner import ScanEngine, ScanTask
+
+    engine = ScanEngine(storage=mock_storage, config=config)
+    amazon = AmazonProduct(
+        asin="B006",
+        title="Dog Toy",
+        category="Pet Supplies",
+        rank=10,
+        price=25.0,
+        rating=4.5,
+        review_count=1200,
+    )
+    supplier = AlibabaProduct(
+        item_id="600",
+        title="Dog Toy Supplier",
+        price=20.0,
+        min_order_qty=2,
+        matched_score=80.0,
+    )
+    engine.alibaba_matcher.match_amazon_product = AsyncMock(return_value=supplier)
+
+    results = await engine._match_parallel(
+        ScanTask("test-task", "Pet Supplies", 1),
+        [amazon],
+        callback=None,
+    )
+
+    assert len(results) == 1
+    assert results[0].amazon.asin == "B006"
+    assert results[0].alibaba.item_id == "600"

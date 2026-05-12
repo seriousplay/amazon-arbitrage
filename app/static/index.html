@@ -24,10 +24,81 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .control-row label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px}
 .num-input{width:80px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:13px;outline:none;text-align:center}
 .num-input:focus{border-color:var(--accent)}
-
 .btn{padding:10px 20px;border:none;border-radius:var(--r2);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#4a7be6}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
 .btn-ghost{padding:8px 14px;font-size:11px;background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:var(--r2);cursor:pointer}.btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+
+/* ─── Robot Grid — Pixel art style ────── */
+.robot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin:16px 0}
+.robot-card{background:var(--surface);border:2px solid var(--border);border-radius:4px;padding:12px 10px 10px;text-align:center;transition:border-color .3s,transform .2s;position:relative;image-rendering:pixelated}
+.robot-card:hover{transform:translateY(-2px)}
+.robot-card.state-scanning{border-color:var(--accent);box-shadow:0 0 8px rgba(91,138,247,.15)}
+.robot-card.state-analyzing{border-color:var(--purple);box-shadow:0 0 8px rgba(124,92,240,.15)}
+.robot-card.state-complete{border-color:var(--green);box-shadow:0 0 8px rgba(32,168,93,.15)}
+.robot-card.state-error{border-color:var(--red)}
+
+/* Robot canvas pixel face */
+.robot-canvas-wrap{width:52px;height:52px;margin:0 auto 6px;position:relative}
+.robot-canvas-wrap canvas{display:block;margin:0 auto;image-rendering:pixelated;image-rendering:crisp-edges;width:52px;height:52px;background:var(--surface3);border-radius:4px}
+
+/* Robot faces - pure CSS (no canvas) */
+.robot-face{margin:0 auto 6px;position:relative;width:52px;height:52px;background:var(--surface3);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .3s;overflow:hidden}
+.robot-eyes{display:flex;gap:8px;align-items:center;justify-content:center;height:12px}
+.robot-eye{width:8px;height:8px;border-radius:50%;background:var(--text2);transition:all .3s}
+.robot-mouth{width:14px;height:4px;border-radius:2px;background:var(--text2);transition:all .3s;margin-top:2px}
+
+/* Waiting: pulse */
+.robot-card.state-waiting .robot-face{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+/* Scanning: eyes scan + color */
+.robot-card.state-scanning .robot-face{border:1px solid var(--accent)}
+.robot-card.state-scanning .robot-eye{animation:scanMove .5s ease-in-out infinite alternate;background:var(--accent);width:10px;height:6px;border-radius:3px}
+@keyframes scanMove{0%{transform:translateX(-3px)}100%{transform:translateX(3px)}}
+.robot-card.state-scanning .robot-mouth{width:10px;height:3px;background:var(--accent);border-radius:0 0 4px 4px}
+
+/* Analyzing: blink + purple */
+.robot-card.state-analyzing .robot-face{border:1px solid var(--purple)}
+.robot-card.state-analyzing .robot-eye{background:var(--purple);animation:blink 2.5s infinite}
+@keyframes blink{0%,45%,55%,100%{transform:scaleY(1)}50%{transform:scaleY(.2)}}
+.robot-card.state-analyzing .robot-mouth{width:8px;height:8px;border-radius:50%;background:transparent;border:2px solid var(--purple)}
+
+/* Complete: happy + green glow */
+.robot-card.state-complete .robot-face{background:rgba(32,168,93,.1);border:1px solid var(--green);box-shadow:0 0 10px rgba(32,168,93,.2)}
+.robot-card.state-complete .robot-eye{background:transparent;border-bottom:3px solid var(--green);border-radius:0;width:10px;height:6px}
+.robot-card.state-complete .robot-eye:first-child{transform:rotate(-40deg);margin-right:4px}
+.robot-card.state-complete .robot-eye:last-child{transform:rotate(40deg);margin-left:4px}
+.robot-card.state-complete .robot-mouth{width:16px;height:5px;border-radius:0 0 8px 8px;background:var(--green)}
+
+/* Error: X eyes */
+.robot-card.state-error .robot-face{border:1px solid var(--red)}
+.robot-card.state-error .robot-eye{background:transparent;width:10px;height:10px;position:relative}
+.robot-card.state-error .robot-eye::before,.robot-card.state-error .robot-eye::after{content:'';position:absolute;width:2px;height:12px;background:var(--red);left:4px;top:-1px}
+.robot-card.state-error .robot-eye::before{transform:rotate(45deg)}
+.robot-card.state-error .robot-eye::after{transform:rotate(-45deg)}
+.robot-card.state-error .robot-mouth{width:12px;height:3px;border-radius:4px 4px 0 0;background:var(--red)}
+
+/* Pulse glow for active robots */
+.robot-card.state-scanning .robot-canvas-wrap::after,.robot-card.state-analyzing .robot-canvas-wrap::after{content:'';position:absolute;inset:-3px;border-radius:6px;animation:robot-glow 1.5s ease-in-out infinite;pointer-events:none}
+.robot-card.state-scanning .robot-canvas-wrap::after{box-shadow:0 0 10px rgba(91,138,247,.25)}
+.robot-card.state-analyzing .robot-canvas-wrap::after{box-shadow:0 0 10px rgba(124,92,240,.25)}
+@keyframes robot-glow{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* Concurrency badge */
+.robot-concurrency{font-size:9px;color:var(--text2);background:var(--surface3);border-radius:2px;padding:1px 5px;display:inline-block;margin-bottom:3px;font-family:monospace}
+.robot-card.state-scanning .robot-concurrency{color:var(--accent);background:rgba(91,138,247,.12)}
+.robot-card.state-analyzing .robot-concurrency{color:var(--purple);background:rgba(124,92,240,.12)}
+.robot-card.state-complete .robot-concurrency{color:var(--green);background:rgba(32,168,93,.12)}
+.robot-card.state-error .robot-concurrency{color:var(--red);background:rgba(224,68,68,.12)}
+
+/* Robot body */
+.robot-category{font-size:11px;font-weight:500;color:var(--text);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.robot-progress{background:var(--surface3);border-radius:2px;height:4px;overflow:hidden;margin:5px 0}
+.robot-progress-fill{height:100%;border-radius:2px;transition:width .5s ease;background:var(--accent)}
+.robot-card.state-complete .robot-progress-fill{background:var(--green)}
+.robot-card.state-error .robot-progress-fill{background:var(--red)}
+.robot-status{font-size:10px;color:var(--text2);line-height:1.3;min-height:24px;display:flex;align-items:center;justify-content:center;font-family:monospace}
+.robot-time{font-size:9px;color:var(--text2);opacity:.6;font-family:monospace}
 
 /* Loading state */
 .loading-state{text-align:center;padding:60px 20px}
@@ -49,10 +120,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .summary-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
 .summary-card.s-grade{border-left:3px solid var(--green)}.summary-card.s-grade .count{color:var(--green)}
 .summary-card.a-grade{border-left:3px solid var(--accent)}.summary-card.a-grade .count{color:var(--accent)}
-.summary-card.info-grade{border-left:3px solid var(--border)}
-.summary-card.info-grade .count{color:var(--text)}
+.summary-card.info-grade{border-left:3px solid var(--border)}.summary-card.info-grade .count{color:var(--text)}
 
-/* Product cards — clickable expandable */
+/* Product cards */
 .product-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;transition:border-color .15s;cursor:pointer}
 .product-card:hover{border-color:var(--accent)}
 .product-card.s-grade{border-left:3px solid var(--green)}
@@ -79,7 +149,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fill-green{background:var(--green)}.fill-blue{background:var(--accent)}.fill-orange{background:var(--orange)}.fill-purple{background:var(--purple)}.fill-red{background:var(--red)}
 
 /* Expandable detail panel */
-.card-expand{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease, margin .25s ease;opacity:0;margin-top:0}
+.card-expand{max-height:0;overflow:hidden;transition:max-height .35s ease,opacity .25s ease;opacity:0}
 .card-expand.open{max-height:2500px;opacity:1;margin-top:14px}
 .expand-inner{border-top:1px solid var(--border);padding-top:14px;display:flex;flex-direction:column;gap:12px}
 .detail-section{background:var(--surface2);border-radius:var(--r2);padding:12px;font-size:12px}
@@ -100,7 +170,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .badge-medium{background:rgba(232,149,32,.12);color:var(--orange)}
 .badge-low{background:rgba(32,168,93,.12);color:var(--green)}
 
-/* Error */
 .error-msg{background:rgba(224,68,68,.08);border:1px solid var(--red);border-radius:var(--r2);padding:12px;font-size:12px;color:var(--red);margin-top:12px}
 </style>
 </head>
@@ -113,32 +182,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <span class="status-badge ready" id="agentStatus">就绪</span>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
-    <span style="font-size:11px;color:var(--text2)" id="loginDot"></span>
-    <button class="btn-ghost" onclick="refreshAll()">刷新</button>
+    <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2)" id="loginDot">1688 --</span>
+    <button class="btn-ghost" style="font-size:12px;padding:6px 8px" id="btnSchedule" onclick="toggleSchedule()" title="定时任务">⏰</button>
+    <button class="btn-ghost" onclick="refreshAll()" style="font-size:11px">刷新</button>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- Control bar (simplified: no category dropdown) -->
-  <div class="control-bar">
+  <!-- Control bar -->
+    <div class="control-bar">
     <div class="control-row">
-      <div style="flex:1;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div>
-          <label>每品类商品数</label>
-          <input class="num-input" id="scanCount" value="15" type="number" min="5" max="50">
+          <label style="cursor:pointer;font-size:11px;color:var(--text2)" onclick="toggleCatPanel()">品类选择 <span id="catCountDisplay" style="color:var(--accent)">--</span> <span style="font-size:9px">▾</span></label>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px" id="catChips">加载中...</div>
         </div>
         <div>
-          <label>覆盖 <span id="catCountDisplay" style="color:var(--accent)">--</span> 个品类</label>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px" id="catChips">加载中...</div>
+          <label>每类商品数</label>
+          <input class="num-input" id="scanCount" value="15" type="number" min="5" max="50">
         </div>
       </div>
       <div style="align-self:flex-end;display:flex;gap:6px">
-        <button class="btn btn-primary" id="btnDiscover" onclick="runDiscover()">🔍 全品类发现</button>
-        <button class="btn" id="btnMatch" onclick="runMatch()" style="background:var(--green);color:#fff;display:none">🔗 匹配1688</button>
-        <button class="btn-ghost" id="btnSchedule" onclick="toggleSchedule()" title="切换定时扫描">⏰</button>
+        <button class="btn btn-primary" id="btnDiscover" onclick="runDiscover()">开始挖掘</button>
+        <button class="btn" id="btnStop" onclick="cancelScan()" style="background:var(--red);color:#fff;display:none">停止扫描</button>
+        <button class="btn" id="btnMatch" onclick="runMatch()" style="background:var(--green);color:#fff;display:none">匹配1688</button>
       </div>
     </div>
+<!-- Category selector panel (collapsible) -->
+    <div id="catPanel" style="display:none;margin-top:10px;padding:10px;background:var(--surface2);border-radius:var(--r2);border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;color:var(--text2)">选择要扫描的品类</span>
+        <span style="font-size:11px;cursor:pointer;color:var(--accent)" onclick="toggleAllCats(true)">全选</span>
+        <span style="font-size:11px;cursor:pointer;color:var(--text2)" onclick="toggleAllCats(false)">取消全选</span>
+      </div>
+      <div id="catCheckboxGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:4px"></div>
+    </div>
+
     <div id="actionInfo" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
     <div id="scheduleInfo" style="font-size:11px;color:var(--text2);margin-top:6px;display:none"></div>
   </div>
@@ -146,9 +226,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <!-- Content -->
   <div id="mainContent">
     <div class="empty-state">
-      <div class="icon">🤖</div>
-      <h2>智能选品助手就绪</h2>
-      <p>点击「全品类发现」扫描全部 20 个品类，AI 自动完成 Amazon 发现 → 7 维评分</p>
+      <div class="icon">🕵️</div>
+      <h2>准备好挖掘选品机会</h2>
+      <p>选择品类后点击「开始挖掘」，多机器人并行扫描 Amazon 热销商品</p>
     </div>
   </div>
 
@@ -156,105 +236,286 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 <script>
 const API='/api/v1';
-let allCats=[],scanTask=null,hasDiscovered=false,rulesCache=null;
+let allCats=[],allTaskIds=[],allResults=[],rulesCache=null,scanPollId=null,selectedCats=new Set();
 
-// ─── Phase 1: Discover all categories ────
+// ─── Phase 1: Parallel Discover ─────────
 async function runDiscover(){
   if(!allCats.length){
-    // Try loading categories inline if not yet loaded
     try{const d=await api('/results/categories');allCats=d.categories||[]}catch(e){}
     if(!allCats.length){alert('品类列表未加载，请刷新后重试');return}
   }
+
+  // Use selected categories, or all if none selected
+  const catsToScan=selectedCats.size?allCats.filter(c=>selectedCats.has(c.id)):allCats;
+  if(!catsToScan.length){alert('请先选择要扫描的品类');return}
+
   const btn=$('btnDiscover'),count=parseInt($('scanCount').value)||15;
-  btn.disabled=true;btn.textContent='全品类扫描中...';hasDiscovered=false;
+  btn.style.display='none';
+  $('btnStop').style.display='';$('btnMatch').style.display='none';$('actionInfo').textContent='';
   $('agentStatus').textContent='工作中';$('agentStatus').className='status-badge busy';
-  $('btnMatch').style.display='none';$('actionInfo').textContent='';
 
-  const total=allCats.length;
-  let completed=0,lastTaskId=null;
-
-  for(const cat of allCats){
-    completed++;
-    $('mainContent').innerHTML=`
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <div class="msg">🔍 正在扫描 (${completed}/${total}) ${cat.name}</div>
-        <div style="margin-top:12px;width:300px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-left:auto;margin-right:auto">
-          <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .5s;width:${(completed/total)*100}%"></div>
-        </div>
-        <div class="sub">${Math.round((completed/total)*100)}% · 品类 ${completed}/${total}</div>
-      </div>`;
+  // ── Step 1: Fire POSTs for selected categories in parallel ──
+  const catTasks=await Promise.all(catsToScan.map(async(cat,i)=>{
     try{
       const p=new URLSearchParams({category:cat.name,max_products:count});
       if(cat.bsr_url)p.append('bsr_url',cat.bsr_url);
       const d=await api('/scan/discover-only?'+p,{method:'POST'});
-      lastTaskId=d.task_id;hasDiscovered=true;
+      return {idx:i,cat:cat.name,taskId:d.task_id,error:false};
     }catch(e){
-      console.warn('品类扫描失败:',cat.name,e);
+      return {idx:i,cat:cat.name,taskId:null,error:true};
     }
+  }));
+
+  const activeTasks=catTasks.filter(t=>!t.error);
+  if(!activeTasks.length){
+    $('mainContent').innerHTML=`<div class="error-msg">所有品类均扫描失败</div>`;
+    btn.disabled=false;btn.textContent='开始挖掘';
+    $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
+    return;
   }
 
-  if(hasDiscovered&&lastTaskId){
-    await waitAndShow(lastTaskId);
-  }else{
-    $('mainContent').innerHTML=`<div class="error-msg">所有品类均扫描失败，请检查网络连接和服务器状态</div>`;
-  }
+  // ── Step 2: Render robot grid ──
+  allResults=[];allTaskIds=[];
+  renderRobotGrid(catTasks);
+  const robotStates=catTasks.map(t=>({
+    taskId:t.taskId,cat:t.cat,done:false,error:t.error,
+    status:t.error?'启动失败':'waiting',progress:0,step:'',
+    startTime:t.error?null:Date.now(),elapsed:0,
+  }));
 
-  btn.disabled=false;btn.textContent='🔍 全品类发现';
-  $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
-  if(hasDiscovered){
-    $('btnMatch').style.display='';
-    $('actionInfo').textContent='✅ 全品类发现完成，点击「🔗 匹配1688」开始货源匹配';
-  }
+  // ── Step 3: Poll all tasks in parallel ──
+  scanPollId=setInterval(async()=>{
+    let allDone=true;
+    // Update elapsed time for running robots
+    const now=Date.now();
+    for(const rs of robotStates){
+      if(!rs.done&&rs.startTime)rs.elapsed=Math.round((now-rs.startTime)/1000);
+    }
+    for(let i=0;i<robotStates.length;i++){
+      const rs=robotStates[i];
+      if(rs.done)continue;
+      if(rs.error){rs.done=true;continue;}
+      try{
+        const d=await api('/results/task/'+rs.taskId);
+        rs.progress=Math.round((d.progress||0)*100);
+        rs.step=d.current_step||'...';
+        // Map phase to robot state
+        // "review" + "completed" = 发现阶段结束，等待1688匹配
+        if(d.phase==='done'||(d.phase==='review'&&d.status==='completed')||d.phase==='matching'){
+          rs.done=true;rs.status='complete';rs.progress=100;
+          const items=d.breakout_results||[];
+          if(items&&items.length)allResults.push(...items);
+          allTaskIds.push(rs.taskId);
+        }else if(d.phase==='discover'){
+          rs.status='scanning';
+        }else{
+          rs.status='analyzing';
+        }
+      }catch(e){
+        // Mark as error after 15 seconds of failures
+        if(rs.startTime&&Date.now()-rs.startTime>15000){
+          rs.done=true;rs.status='error';rs.step='连接失败';
+        }
+      }
+      if(!rs.done)allDone=false;
+    }
+    updateRobotGrid(robotStates);
+
+    if(allDone){
+      clearInterval(scanPollId);scanPollId=null;
+      finishScan();
+    }
+  },1800);
 }
 
-// ─── Phase 2: Match ─────────────────────
+function finishScan(cancelled){
+  if(allResults.length){
+    renderCombinedResults(allResults);
+    $('btnMatch').style.display='';
+    $('actionInfo').textContent=cancelled?`⏹ 已停止，已获取 ${allResults.length} 个结果`:`✅ 并行扫描完成，共 ${allResults.length} 个选品机会`;
+  }else{
+    $('mainContent').innerHTML=`<div class="error-msg">${cancelled?'扫描已停止':'扫描完成'}，未发现符合条件的商品</div>`;
+  }
+  $('btnStop').style.display='none';
+  $('btnDiscover').style.display='';
+  $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
+}
+
+async function cancelScan(){
+  if(!confirm('确定停止所有正在运行的扫描任务？'))return;
+  $('btnStop').disabled=true;$('btnStop').textContent='正在停止...';
+  try{await api('/scan/cancel-all',{method:'POST'})}catch(e){}
+  if(scanPollId){clearInterval(scanPollId);scanPollId=null;}
+  finishScan(true);
+}
+
+// ─── Phase 2: Match ALL tasks ────────────
 async function runMatch(){
-  if(!scanTask){alert('请先执行发现阶段');return}
+  if(!allTaskIds.length){alert('请先执行发现阶段');return}
   const btn=$('btnMatch');
-  btn.disabled=true;btn.textContent='匹配中...';
+  btn.disabled=true;btn.textContent='匹配全部品类中...';
   $('agentStatus').textContent='工作中';$('agentStatus').className='status-badge busy';
-  $('mainContent').innerHTML=`<div class="loading-state"><div class="spinner"></div><div class="msg">🔗 正在匹配 1688 货源...</div></div>`;
-  try{await api('/scan/'+scanTask+'/match-now',{method:'POST'});await waitAndShow(scanTask);}
-  catch(e){$('mainContent').innerHTML=`<div class="error-msg">${e.message}</div>`}
+  $('actionInfo').textContent='';
+
+  const total=allTaskIds.length;
+  let matched=[];
+  for(let i=0;i<allTaskIds.length;i++){
+    const tid=allTaskIds[i];
+    const catName=allCats[i]?allCats[i].name:`品类 ${i+1}`;
+    $('mainContent').innerHTML=`
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <div class="msg">🔗 ${catName} — 正在匹配 1688 (${i+1}/${total})</div>
+        <div style="margin-top:12px;width:300px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-left:auto;margin-right:auto">
+          <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .5s;width:${((i+1)/total)*100}%"></div>
+        </div>
+        <div class="sub">${Math.round(((i+1)/total)*100)}% · 品类 ${i+1}/${total}</div>
+      </div>`;
+    try{
+      await api('/scan/'+tid+'/match-now',{method:'POST'});
+      const taskData=await pollTask(tid);
+      if(taskData&&taskData.breakout_results)matched.push(...taskData.breakout_results);
+    }catch(e){console.warn('品类匹配失败:',tid,e);}
+  }
+  if(matched.length)renderCombinedResults(matched);
+  else $('mainContent').innerHTML=`<div class="error-msg">1688 匹配未返回结果</div>`;
   btn.disabled=false;btn.textContent='🔗 匹配1688';
   $('agentStatus').textContent='就绪';$('agentStatus').className='status-badge ready';
-  $('actionInfo').textContent='';
 }
 
-// ─── Helpers ────────────────────────────
+// ─── Robot Grid — CSS Faces ─────────────
+// 20 category colors for robot faces
+const ROBOT_COLORS=[
+  '#5dade2','#f5b041','#58d68d','#ec7063','#af7ac5',
+  '#f1948a','#85c1e9','#f8c471','#82e0aa','#a3e4d7',
+  '#f0b27a','#7fb3d8','#d2b4de','#a9dfbf','#fad7a0',
+  '#aed6f1','#f9e79f','#d5dbdb','#aab7b8','#edbb99',
+];
+
+function renderRobotGrid(tasks){
+  let html='<div style="margin-bottom:8px;font-size:12px;color:var(--text2)">🎮 <b>机器人车间</b> — ${tasks.length}位机器人并行扫描中</div><div class="robot-grid">';
+  for(let i=0;i<tasks.length;i++){
+    const t=tasks[i];
+    const catName=t.cat||'未知品类';
+    const state=t.error?'error':'waiting';
+    const statusText=t.error?'启动失败':'启动中...';
+    const color=ROBOT_COLORS[i%ROBOT_COLORS.length];
+    const shortCat=catName.length>16?catName.slice(0,14)+'..':catName;
+    html+='<div class="robot-card state-'+state+'" id="robot-'+i+'">'
+      +'<div class="robot-concurrency" id="rc-'+i+'">⚡ '+(t.error?'✗':'启动中')+'</div>'
+      +'<div class="robot-face" style="border:2px solid '+color+'">'
+      +'<div class="robot-eyes"><div class="robot-eye" style="background:'+color+'"></div><div class="robot-eye" style="background:'+color+'"></div></div>'
+      +'<div class="robot-mouth" style="background:'+color+'"></div></div>'
+      +'<div class="robot-category" title="'+esc(catName)+'">'+esc(shortCat)+'</div>'
+      +'<div class="robot-progress"><div class="robot-progress-fill" id="rpf-'+i+'" style="width:0%"></div></div>'
+      +'<div class="robot-status" id="rs-'+i+'">'+statusText+'</div>'
+      +'<div class="robot-time" id="rt-'+i+'"></div></div>';
+  }
+  html+='</div>';
+  $('mainContent').innerHTML=html;
+}
+
+function updateRobotGrid(states){
+  const activeCount=states.filter(s=>!s.done&&!s.error).length;
+  const doneCount=states.filter(s=>s.done).length;
+  const total=states.length;
+  for(let i=0;i<states.length;i++){
+    const s=states[i];const card=document.getElementById('robot-'+i);
+    if(!card)continue;
+    card.className='robot-card state-'+s.status;
+    const pf=document.getElementById('rpf-'+i);
+    if(pf)pf.style.width=s.progress+'%';
+    const st=document.getElementById('rs-'+i);
+    if(st){
+      const steps={'waiting':'⏳ 启动中','scanning':s.step||'🔍 爬取','analyzing':s.step||'📊 分析','complete':'✅ 完成','error':'❌ 失败'};
+      st.textContent=steps[s.status]||s.step||'...';
+    }
+    const rt=document.getElementById('rt-'+i);
+    if(rt&&s.elapsed>0)rt.textContent=s.elapsed+'s';
+    const rc=document.getElementById('rc-'+i);
+    if(rc){
+      if(s.status==='scanning')rc.textContent='🔍 爬取中';
+      else if(s.status==='analyzing')rc.textContent='📊 分析中';
+      else if(s.status==='complete')rc.textContent='✅ 完成';
+      else if(s.status==='error')rc.textContent='❌ 故障';
+      else rc.textContent='⏳ 启动中 ('+activeCount+'运行)';
+    }
+    // Update face color for state
+    const face=card.querySelector('.robot-face');
+    if(face&&s.status==='complete')face.style.borderColor='var(--green)';
+    else if(face&&s.status==='scanning')face.style.borderColor='var(--accent)';
+    else if(face&&s.status==='analyzing')face.style.borderColor='var(--purple)';
+    else if(face&&s.status==='error')face.style.borderColor='var(--red)';
+  }
+  const summary=document.querySelector('#mainContent > div:first-child');
+  if(summary)summary.innerHTML='🎮 <b>机器人车间</b> — '+doneCount+'/'+total+' 完成 · '+activeCount+' 扫描中';
+}// ─── Helpers ────────────────────────────
 function $(id){return document.getElementById(id)}
 function fm(n,d){return Number(n||0).toFixed(d||1)}
-function nn(v,f){return v!=null&&v!==undefined?v: (f||'--')}
+function nn(v,f){return v!=null&&v!==undefined?v:(f||'--')}
 async function api(path,opt){const r=await fetch(API+path,opt||{});if(!r.ok){const t=await r.text();throw new Error(t||r.status)}return r.json()}
 
-// ─── Categories (read-only display) ─────
+// ─── Categories ─────────────────────
 async function loadCats(){
   try{
     const d=await api('/results/categories');
     allCats=d.categories||[];
-    $('catCountDisplay').textContent=allCats.length;
-    // Show first 5 as chips, rest as "+N more"
-    const chips=allCats.slice(0,5).map(c=>c.name).join(', ');
-    const extra=allCats.length>5?` <span style="color:var(--text2)">+${allCats.length-5} 个更多</span>`:'';
-    $('catChips').innerHTML=chips+extra;
-  }catch(e){
-    $('catChips').textContent='获取品类列表失败，点击刷新重试';
-  }
+    // Select all by default
+    selectedCats=new Set(allCats.map(c=>c.id));
+    renderCatCheckboxes();
+    updateCatSummary();
+  }catch(e){$('catChips').textContent='获取品类列表失败';}
+}
+function renderCatCheckboxes(){
+  if(!allCats.length)return;
+  const grid=$('catCheckboxGrid');
+  grid.innerHTML=allCats.map(c=>{
+    const checked=selectedCats.has(c.id)?'checked':'';
+    const catId=c.id.replace(/[^a-z0-9-]/g,'');
+    return `<label style="display:flex;align-items:center;gap:5px;padding:3px 5px;cursor:pointer;border-radius:3px;font-size:11px;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(91,138,247,.08)'" onmouseout="this.style.background=''">
+      <input type="checkbox" ${checked} onchange="toggleCat('${c.id}')" style="accent-color:var(--accent);width:13px;height:13px">
+      ${esc(c.name)}
+    </label>`;
+  }).join('');
+}
+function toggleCat(id){
+  if(selectedCats.has(id))selectedCats.delete(id);else selectedCats.add(id);
+  renderCatCheckboxes();
+  updateCatSummary();
+}
+function toggleAllCats(select){
+  if(select)selectedCats=new Set(allCats.map(c=>c.id));
+  else selectedCats=new Set();
+  renderCatCheckboxes();
+  updateCatSummary();
+}
+function toggleCatPanel(){
+  const panel=$('catPanel');
+  panel.style.display=panel.style.display==='none'?'':'none';
+}
+function updateCatSummary(){
+  const total=allCats.length,sel=selectedCats.size;
+  $('catCountDisplay').textContent=sel===total?`全部${total}个`: `${sel}/${total}`;
+  const chips=allCats.filter(c=>selectedCats.has(c.id)).slice(0,4).map(c=>c.name).join(', ');
+  const extra=sel>4?` <span style="color:var(--text2)">+${sel-4} 个更多</span>`:sel===0?'<span style="color:var(--orange)">未选择</span>':'';
+  $('catChips').innerHTML=sel?chips+extra:'<span style="color:var(--orange)">请选择品类</span>';
+  // Update button text
+  const btn=$('btnDiscover');
+  if(btn&&btn.style.display!=='none')btn.textContent=sel===total||!sel?'开始挖掘':`挖掘 ${sel} 个品类`;
 }
 
 // ─── Login status ──────────────────────
 async function loadLogin(){
   try{const d=await api('/status/login');
-    $('loginDot').textContent=d.status==='ok'?'1688 ✓':'1688 ✗';
-    $('loginDot').style.color=d.status==='ok'?'var(--green)':'var(--orange)';
+    $('loginDot').textContent=d.status==='ok'?'1688':d.status==='needs_cookies'?'需登录':'不可用';
+    $('loginDot').style.color=d.status==='ok'?'var(--green)':'var(--red)';
   }catch(e){}
 }
 
 // ─── Rules ──────────────────────────────
 async function ensureRules(){
   if(rulesCache)return rulesCache;
-  try{rulesCache=await api('/scan/rules');return rulesCache}catch(e){return {}}
+  try{rulesCache=await api('/scan/rules/raw');return rulesCache}catch(e){return {}}
 }
 function renderRulesSummary(rules){
   if(!rules||!Object.keys(rules).length)return '';
@@ -268,48 +529,37 @@ function renderRulesSummary(rules){
     ['最低价差倍率',rules.min_price_ratio,'×'],
   ];
   return items.map(([k,v,u])=>
-    `<div class="rule-line"><span class="rule-pass">✓</span><span>${k}: ${v}${u}</span></div>`
+    `<div class="rule-line"><span class="rule-pass">✓</span><span>${k}: ${v??'--'}${v!=null?u:''}</span></div>`
   ).join('');
 }
 
-// ─── Wait & render ────────────────────
-async function waitAndShow(tid){
-  const steps=[];
+// ─── Poll single task ──────────────
+async function pollTask(tid){
   for(let i=0;i<90;i++){
     await new Promise(r=>setTimeout(r,2000));
     try{
       const d=await api('/results/task/'+tid);
-      if(d.phase==='done'){renderResults(d);return}
-      const step=d.current_step||'处理中...';
-      const pct=Math.round(d.progress*100);
-      if(!steps.includes(step))steps.push(step);
-      $('mainContent').innerHTML=`
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <div class="msg">🤖 AI 正在分析选品机会</div>
-          <div style="margin-top:12px;width:300px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-left:auto;margin-right:auto">
-            <div style="height:100%;background:var(--accent);border-radius:2px;transition:width .5s;width:${pct}%"></div>
-          </div>
-          <div class="sub">${pct}% · ${step}</div>
-          <div style="margin-top:16px;text-align:left;max-width:400px;margin-left:auto;margin-right:auto;font-size:11px;color:var(--text2);line-height:2">
-            ${steps.map((s,i)=>`<div>${i+1}. ${s}</div>`).join('')}
-          </div>
-        </div>`;
+      if(d.phase==='done')return d;
     }catch(e){}
   }
-  try{const d=await api('/results/task/'+tid);renderResults(d)}catch(e){}
+  try{return await api('/results/task/'+tid)}catch(e){return null}
+}
+
+// ─── Render combined results ──────────
+function renderCombinedResults(results){
+  renderResults({
+    phase:'done',breakout_results:results,category:`${allCats.length} 个品类`,
+  });
 }
 
 // ─── Render results ────────────────────
 async function renderResults(d){
   const list=d.breakout_results||[];
   await ensureRules();
-
   if(!list.length){
     $('mainContent').innerHTML=`<div class="empty-state"><div class="icon">📭</div><h2>暂无匹配结果</h2><p>未发现符合条件的商品，可调整选品规则后重试</p></div>`;
     return;
   }
-
   const sCount=list.filter(r=>r.breakout_score.grade==='S级爆款').length;
   const aCount=list.filter(r=>r.breakout_score.grade==='A级潜力').length;
   const bCount=list.filter(r=>r.breakout_score.grade==='B级观察').length;
@@ -318,7 +568,6 @@ async function renderResults(d){
   const riskWarns=list.filter(r=>r.risk_assessment&&r.risk_assessment.level!=='低风险').length;
   const upTrends=list.filter(r=>r.trend_data&&r.trend_data.direction==='up').length;
   const matched=list.filter(r=>r.has_match).length;
-
   const parts=[];
   if(sCount)parts.push(`🎯 ${sCount} 个S级爆款`);
   if(aCount)parts.push(`💡 ${aCount} 个A级潜力`);
@@ -326,7 +575,6 @@ async function renderResults(d){
   if(matched)parts.push(`🔗 ${matched}/${list.length} 已匹配1688`);
   if(upTrends)parts.push(`📈 ${upTrends} 个上升趋势`);
   if(riskWarns)parts.push(`⚠️ ${riskWarns} 个需关注风险`);
-
   $('mainContent').innerHTML=`
     <div class="summary-bar">
       <div class="summary-card s-grade"><div class="count">${sCount}</div><div class="label">S级爆款</div></div>
@@ -341,12 +589,10 @@ async function renderResults(d){
     ${list.slice(0,15).map((p,i)=>renderProductCard(p,i)).join('')}`;
 }
 
-// ─── Render a single product card ──────
 function renderProductCard(p,idx){
   const bs=p.breakout_score;const d=bs.dimensions;
   const gradeColors={'S级爆款':'var(--green)','A级潜力':'var(--accent)','B级观察':'var(--orange)'};
   const gc=gradeColors[bs.grade]||'var(--text2)';
-
   const reasons=[];
   if(d.product_fundamentals>=15)reasons.push('产品力强（高评分+大量评论验证需求）');
   else if(d.product_fundamentals>=10)reasons.push('产品基本面良好');
@@ -358,12 +604,7 @@ function renderProductCard(p,idx){
   if(d.supply_chain>=8)reasons.push('1688供应链成熟');
   if(d.risk>=8)reasons.push('风险可控');
   if(d.trend>=4)reasons.push('搜索热度上升');
-
-  const risk=p.risk_assessment;
-  const risks=risk?risk.risks||[]:[];
-  const trend=p.trend_data;
-
-  const dimMax=20;
+  const risk=p.risk_assessment;const risks=risk?risk.risks||[]:[];const trend=p.trend_data;
   const dims=[
     {v:d.product_fundamentals,m:20,c:'fill-green',l:'产品力'},
     {v:d.market_demand,m:20,c:'fill-blue',l:'需求'},
@@ -373,7 +614,6 @@ function renderProductCard(p,idx){
     {v:d.risk,m:10,c:d.risk>=8?'fill-green':d.risk>=5?'fill-orange':'fill-red',l:'风险'},
     {v:d.trend,m:5,c:d.trend>=4?'fill-green':d.trend>=3?'fill-blue':'fill-orange',l:'趋势'},
   ];
-
   return `<div class="product-card ${bs.grade==='S级爆款'?'s-grade':bs.grade==='A级潜力'?'a-grade':'b-grade'}" onclick="toggleCard(${idx})">
     <div class="product-header">
       <div class="product-title" title="${esc(p.title)}">${esc(p.title)}</div>
@@ -395,64 +635,40 @@ function renderProductCard(p,idx){
       ${trend&&trend.matched_keyword?`<span class="warn-trend">📊 ${trend.recommendation}</span>`:''}
     </div>`:''}
     <div class="dim-bars">${dims.map(dm=>`<div class="dim-bar" title="${dm.l}: ${fm(dm.v,1)}/${dm.m}"><div class="fill ${dm.c}" style="width:${(dm.v/dm.m)*100}%"></div></div>`).join('')}</div>
-
-    <!-- Expandable detail panel -->
     <div class="card-expand" id="expand-${idx}">
       <div class="expand-inner">
-        ${renderDetailBasic(p)}
-        ${renderDetailMatch(p)}
-        ${renderDetailDimensions(p,bs)}
-        ${renderDetailRisk(p,risk)}
-        ${renderDetailTrend(p,trend)}
-        ${renderDetailRules()}
+        ${renderDetailBasic(p)}${renderDetailMatch(p)}${renderDetailDimensions(p,bs)}${renderDetailRisk(p,risk)}${renderDetailTrend(p,trend)}${renderDetailRules()}
       </div>
     </div>
   </div>`;
 }
 
-// ─── Toggle card expand ────────────────
 function toggleCard(idx){
-  const el=$('expand-'+idx);
-  if(!el)return;
-  const isOpen=el.classList.contains('open');
+  const el=$('expand-'+idx);if(!el)return;
   el.classList.toggle('open');
-  if(!isOpen){
-    setTimeout(()=>{
-      const card=el.closest('.product-card');
-      if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'});
-    },100);
-  }
+  if(el.classList.contains('open'))setTimeout(()=>{const card=el.closest('.product-card');if(card)card.scrollIntoView({behavior:'smooth',block:'nearest'})},100);
 }
 
-// ─── Detail panel sections ──────────────
-
+// ─── Detail sections ────────────────────
 function renderDetailBasic(p){
-  return `<div class="detail-section">
-    <h4>📋 基本信息</h4>
-    <div class="detail-grid">
-      <div class="detail-item"><span class="key">ASIN</span><span class="val"><a href="https://www.amazon.com/dp/${p.asin}" target="_blank" rel="noopener">${p.asin} ↗</a></span></div>
-      <div class="detail-item"><span class="key">品牌</span><span class="val">${nn(p.brand,'未知')}</span></div>
-      <div class="detail-item"><span class="key">品类路径</span><span class="val">${nn(p.category_path,'未知')}</span></div>
-      <div class="detail-item"><span class="key">Amazon售价</span><span class="val" style="color:var(--green)">${p.price?'$'+p.price:'--'}</span></div>
-      <div class="detail-item"><span class="key">评分</span><span class="val">⭐ ${nn(p.rating)}</span></div>
-      <div class="detail-item"><span class="key">评论数</span><span class="val">${nn(p.review_count,0)}</span></div>
-      <div class="detail-item"><span class="key">BSR排名</span><span class="val">#${nn(p.rank)}</span></div>
-      <div class="detail-item"><span class="key">利润率</span><span class="val" style="color:${p.profit_margin>=30?'var(--green)':'var(--orange)'}">${p.profit_margin?fm(p.profit_margin,1)+'%':'待匹配'}</span></div>
-    </div>
-  </div>`;
+  return `<div class="detail-section"><h4>📋 基本信息</h4><div class="detail-grid">
+    <div class="detail-item"><span class="key">ASIN</span><span class="val"><a href="https://www.amazon.com/dp/${p.asin}" target="_blank" rel="noopener">${p.asin} ↗</a></span></div>
+    <div class="detail-item"><span class="key">品牌</span><span class="val">${nn(p.brand,'未知')}</span></div>
+    <div class="detail-item"><span class="key">品类路径</span><span class="val">${nn(p.category_path,'未知')}</span></div>
+    <div class="detail-item"><span class="key">Amazon售价</span><span class="val" style="color:var(--green)">${p.price?'$'+p.price:'--'}</span></div>
+    <div class="detail-item"><span class="key">评分</span><span class="val">⭐ ${nn(p.rating)}</span></div>
+    <div class="detail-item"><span class="key">评论数</span><span class="val">${nn(p.review_count,0)}</span></div>
+    <div class="detail-item"><span class="key">BSR排名</span><span class="val">#${nn(p.rank)}</span></div>
+    <div class="detail-item"><span class="key">利润率</span><span class="val" style="color:${p.profit_margin>=30?'var(--green)':'var(--orange)'}">${p.profit_margin?fm(p.profit_margin,1)+'%':'待匹配'}</span></div>
+  </div></div>`;
 }
-
 function renderDetailMatch(p){
   if(!p.has_match||!p.match_score)return '';
-  return `<div class="detail-section">
-    <h4>🔗 1688 匹配详情</h4>
-    <div class="detail-grid">
-      <div class="detail-item"><span class="key">匹配分</span><span class="val" style="color:${p.match_score>=70?'var(--green)':'var(--orange)'}">${fm(p.match_score,1)}</span></div>
-      <div class="detail-item"><span class="key">预估利润</span><span class="val" style="color:var(--green)">${p.profit_margin?fm(p.profit_margin,1)+'%':'--'}</span></div>
-    </div>
-  </div>`;
+  return `<div class="detail-section"><h4>🔗 1688 匹配详情</h4><div class="detail-grid">
+    <div class="detail-item"><span class="key">匹配分</span><span class="val" style="color:${p.match_score>=70?'var(--green)':'var(--orange)'}">${fm(p.match_score,1)}</span></div>
+    <div class="detail-item"><span class="key">预估利润</span><span class="val" style="color:var(--green)">${p.profit_margin?fm(p.profit_margin,1)+'%':'--'}</span></div>
+  </div></div>`;
 }
-
 function renderDetailDimensions(p,bs){
   const d=bs.dimensions;
   const allDims=[
@@ -464,60 +680,42 @@ function renderDetailDimensions(p,bs){
     {k:'risk',l:'风险',v:d.risk,m:10,desc:'商标/专利/认证/合规风险综合评估',c:d.risk>=8?'green':d.risk>=5?'orange':'red'},
     {k:'trend',l:'趋势',v:d.trend,m:5,desc:'Google Trends搜索热度 + 季节性 + 品类生命周期',c:d.trend>=4?'green':d.trend>=3?'blue':'orange'},
   ];
-  return `<div class="detail-section">
-    <h4>📊 评分维度详解</h4>
+  return `<div class="detail-section"><h4>📊 评分维度详解</h4>
     ${allDims.map(di=>`
       <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
         <div style="width:50px;font-size:11px;font-weight:600;color:var(--${di.c})">${fm(di.v,1)}/${di.m}</div>
-        <div style="flex:1">
-          <div style="font-size:12px">${di.l}</div>
-          <div style="font-size:10px;color:var(--text2)">${di.desc}</div>
-        </div>
-        <div style="width:60px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
-          <div style="height:100%;background:var(--${di.c});border-radius:2px;width:${(di.v/di.m)*100}%"></div>
-        </div>
-      </div>
-    `).join('')}
+        <div style="flex:1"><div style="font-size:12px">${di.l}</div><div style="font-size:10px;color:var(--text2)">${di.desc}</div></div>
+        <div style="width:60px;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden"><div style="height:100%;background:var(--${di.c});border-radius:2px;width:${(di.v/di.m)*100}%"></div></div>
+      </div>`).join('')}
   </div>`;
 }
-
 function renderDetailRisk(p,risk){
   if(!risk)return '';
-  const items=risk.risks||[];
-  const level=risk.level||'未知';
+  const items=risk.risks||[];const level=risk.level||'未知';
   const levelColor=level==='低风险'?'low':level==='中风险'?'medium':'high';
-  return `<div class="detail-section">
-    <h4>⚠️ 风险评估 <span class="badge badge-${levelColor}">${esc(level)}</span></h4>
+  return `<div class="detail-section"><h4>⚠️ 风险评估 <span class="badge badge-${levelColor}">${esc(level)}</span></h4>
     ${items.length?items.map(r=>`<div style="padding:3px 0;font-size:12px;display:flex;gap:6px"><span style="color:var(--red)">•</span>${esc(r)}</div>`).join(''):'<div style="color:var(--text2);font-size:12px">未发现明显风险</div>'}
   </div>`;
 }
-
 function renderDetailTrend(p,trend){
   if(!trend)return '';
   const dirBadge=trend.direction==='up'?'up':trend.direction==='down'?'down':'flat';
   const confBadge=trend.confidence==='high'?'low':trend.confidence==='medium'?'medium':'high';
-  return `<div class="detail-section">
-    <h4>📈 趋势信号 <span class="badge badge-${dirBadge}">${trend.direction==='up'?'上升':trend.direction==='down'?'下降':'平稳'}</span></h4>
-    <div class="detail-grid">
-      <div class="detail-item"><span class="key">匹配关键词</span><span class="val">${esc(trend.matched_keyword||'--')}</span></div>
-      <div class="detail-item"><span class="key">热度指数</span><span class="val">${nn(trend.popularity)}/100</span></div>
-      <div class="detail-item"><span class="key">近1月变化</span><span class="val" style="color:${trend.change_1m>=0?'var(--green)':'var(--red)'}">${trend.change_1m>=0?'+':''}${fm(trend.change_1m,1)}%</span></div>
-      <div class="detail-item"><span class="key">近3月变化</span><span class="val" style="color:${trend.change_3m>=0?'var(--green)':'var(--red)'}">${trend.change_3m>=0?'+':''}${fm(trend.change_3m,1)}%</span></div>
-      <div class="detail-item"><span class="key">近6月变化</span><span class="val" style="color:${trend.change_6m>=0?'var(--green)':'var(--red)'}">${trend.change_6m>=0?'+':''}${fm(trend.change_6m,1)}%</span></div>
-      <div class="detail-item"><span class="key">数据源</span><span class="val">${trend.source==='builtin'?'内建数据集':'BSR反推':'web'?'网络搜索':'估算'}</span></div>
-      <div class="detail-item"><span class="key">置信度</span><span class="val"><span class="badge badge-${confBadge}">${trend.confidence||'medium'}</span></span></div>
-      ${trend.seasonality_peak&&trend.seasonality_peak.length?`<div class="detail-item"><span class="key">季节性高峰</span><span class="val">${trend.seasonality_peak.map(m=>m+'月').join('、')}</span></div>`:''}
-      ${trend.related_queries&&trend.related_queries.length?`<div class="detail-item"><span class="key">相关搜索词</span><span class="val" style="font-size:10px">${trend.related_queries.slice(0,5).join(', ')}</span></div>`:''}
-    </div>
-  </div>`;
+  return `<div class="detail-section"><h4>📈 趋势信号 <span class="badge badge-${dirBadge}">${trend.direction==='up'?'上升':trend.direction==='down'?'下降':'平稳'}</span></h4><div class="detail-grid">
+    <div class="detail-item"><span class="key">匹配关键词</span><span class="val">${esc(trend.matched_keyword||'--')}</span></div>
+    <div class="detail-item"><span class="key">热度指数</span><span class="val">${nn(trend.popularity)}/100</span></div>
+    <div class="detail-item"><span class="key">近1月变化</span><span class="val" style="color:${trend.change_1m>=0?'var(--green)':'var(--red)'}">${trend.change_1m>=0?'+':''}${fm(trend.change_1m,1)}%</span></div>
+    <div class="detail-item"><span class="key">近3月变化</span><span class="val" style="color:${trend.change_3m>=0?'var(--green)':'var(--red)'}">${trend.change_3m>=0?'+':''}${fm(trend.change_3m,1)}%</span></div>
+    <div class="detail-item"><span class="key">近6月变化</span><span class="val" style="color:${trend.change_6m>=0?'var(--green)':'var(--red)'}">${trend.change_6m>=0?'+':''}${fm(trend.change_6m,1)}%</span></div>
+    <div class="detail-item"><span class="key">数据源</span><span class="val">${trend.source==='builtin'?'内建数据集':trend.source==='bsr'?'BSR反推':trend.source==='web'?'网络搜索':'估算'}</span></div>
+    <div class="detail-item"><span class="key">置信度</span><span class="val"><span class="badge badge-${confBadge}">${trend.confidence||'medium'}</span></span></div>
+    ${trend.seasonality_peak&&trend.seasonality_peak.length?`<div class="detail-item"><span class="key">季节性高峰</span><span class="val">${trend.seasonality_peak.map(m=>m+'月').join('、')}</span></div>`:''}
+    ${trend.related_queries&&trend.related_queries.length?`<div class="detail-item"><span class="key">相关搜索词</span><span class="val" style="font-size:10px">${trend.related_queries.slice(0,5).join(', ')}</span></div>`:''}
+  </div></div>`;
 }
-
 function renderDetailRules(){
   if(!rulesCache)return '';
-  return `<div class="detail-section">
-    <h4>⚙️ 应用规则</h4>
-    ${renderRulesSummary(rulesCache)}
-  </div>`;
+  return `<div class="detail-section"><h4>⚙️ 应用规则</h4>${renderRulesSummary(rulesCache)}</div>`;
 }
 
 // ─── Schedule ──────────────────────────
@@ -528,29 +726,57 @@ async function loadSchedule(){
     const t=d.tasks?.['weekly-scan'];
     if(t){
       scheduleEnabled=!!t.enabled;
-      $('btnSchedule').textContent=scheduleEnabled?'⏰ 定时:开':'⏰ 定时:关';
       $('btnSchedule').style.color=scheduleEnabled?'var(--green)':'var(--text2)';
-      const last=d.last_runs?.['weekly-scan'];
-      $('scheduleInfo').style.display='block';
-      $('scheduleInfo').innerHTML=`每周${['','一','二','三','四','五','六','日'][t.day||1]} ${t.hour||9}:${String(t.minute||0).padStart(2,'0')} · ${t.categories?.length||0}个品类${last?` · 上次: ${new Date(last).toLocaleString()}`:''}`;
     }
   }catch(e){}
 }
 async function toggleSchedule(){
-  const enable=!scheduleEnabled;
-  await api('/scan/schedule/weekly-scan/toggle?enabled='+enable,{method:'POST'});
-  scheduleEnabled=enable;
-  $('btnSchedule').textContent=enable?'⏰ 定时:开':'⏰ 定时:关';
-  $('btnSchedule').style.color=enable?'var(--green)':'var(--text2)';
-}
-async function runScheduleNow(){
-  if(!confirm('立即执行每周定时扫描？将依次扫描配置的品类。'))return;
-  $('btnSchedule').textContent='⏰ 执行中...';
-  await api('/scan/schedule/weekly-scan/run-now',{method:'POST'});
-  alert('✓ 定时扫描已启动，请查看任务进度');
-  loadSchedule();
+  // Just toggle the info panel visibility
+  const info=$('scheduleInfo');
+  if(info.style.display!=='block'){
+    // Load latest schedule state first
+    try{
+      const d=await api('/scan/schedule');
+      const t=d.tasks?.['weekly-scan'];
+      if(t){
+        scheduleEnabled=!!t.enabled;
+        $('btnSchedule').style.color=scheduleEnabled?'var(--green)':'var(--text2)';
+        const last=d.last_runs?.['weekly-scan'];
+        info.style.display='block';
+        info.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text2)">定时 <b>每周一 09:00</b> 自动扫描核心品类</span>
+          <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:${scheduleEnabled?'rgba(32,168,93,.12)':'rgba(107,113,133,.12)'};color:${scheduleEnabled?'var(--green)':'var(--text2)'}">${scheduleEnabled?'已开启':'已关闭'}</span>
+          <label style="position:relative;display:inline-block;width:36px;height:18px;cursor:pointer">
+            <input type="checkbox" ${scheduleEnabled?'checked':''} onchange="toggleScheduleEnable(this.checked)" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;inset:0;background:${scheduleEnabled?'var(--green)':'var(--surface3)'};border-radius:9px;transition:.3s"></span>
+            <span style="position:absolute;height:14px;width:14px;left:2px;bottom:2px;background:white;border-radius:50%;transition:.3s;transform:${scheduleEnabled?'translateX(18px)':''}"></span>
+          </label>
+          ${last?'<span style="font-size:10px;color:var(--text2)">上次执行: '+new Date(last).toLocaleString()+'</span>':''}
+        </div>`;
+      }else{
+        info.style.display='block';
+        info.innerHTML='<span style="font-size:11px;color:var(--text2)">未配置定时任务</span>';
+      }
+    }catch(e){
+      info.style.display='block';
+      info.innerHTML='<span style="font-size:11px;color:var(--red)">加载定时配置失败</span>';
+    }
+  }else{
+    info.style.display='none';
+  }
 }
 
+async function toggleScheduleEnable(enable){
+  try{
+    await api('/scan/schedule/weekly-scan/toggle?enabled='+enable,{method:'POST'});
+    scheduleEnabled=enable;
+    $('btnSchedule').style.color=enable?'var(--green)':'var(--text2)';
+    // Refresh the panel content
+    await toggleSchedule();
+  }catch(e){
+    $('actionInfo').textContent='操作失败: '+e.message;
+  }
+}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 
 // ─── Init ──────────────────────────────

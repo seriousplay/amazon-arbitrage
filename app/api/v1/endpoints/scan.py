@@ -1,6 +1,8 @@
 """
 扫描任务 API — 发现 / 审核 / 匹配
 """
+import inspect
+
 from fastapi import APIRouter, HTTPException, Request
 
 from app.utils.logger import get_logger
@@ -97,6 +99,14 @@ async def start_discover_only(
     return {"success": True, "task_id": task_id, "phase": "discover"}
 
 
+@router.post("/cancel-all")
+async def cancel_all_scans(request: Request):
+    """取消所有正在运行的扫描任务"""
+    scanner = _get_scanner(request)
+    count = await scanner.cancel_all()
+    return {"success": True, "cancelled": count, "message": f"已取消 {count} 个任务"}
+
+
 @router.post("/{task_id}/match-now")
 async def match_now(request: Request, task_id: str):
     """阶段2：对已发现商品执行 1688 匹配"""
@@ -110,6 +120,23 @@ async def match_now(request: Request, task_id: str):
 # ═══════════════════════════════════════════════════════
 # 一键扫描（推荐）
 # ═══════════════════════════════════════════════════════
+
+@router.post("/")
+async def start_scan(
+    request: Request, category: str = "Pet Supplies",
+    max_products: int = 15, bsr_url: str = None,
+):
+    """兼容旧版入口：等同于 quick-scan。"""
+    scanner = _get_scanner(request)
+    if "start_scan" in vars(scanner):
+        result = scanner.start_scan(category=category, max_products=max_products)
+    else:
+        result = scanner.start_quick_scan(
+            category=category, max_products=max_products, bsr_url=bsr_url,
+        )
+    task_id = await result if inspect.isawaitable(result) else result
+    return {"success": True, "task_id": task_id, "mode": "quick"}
+
 
 @router.post("/quick-scan")
 async def start_quick_scan(

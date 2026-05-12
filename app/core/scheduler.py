@@ -31,6 +31,8 @@ class InAppScheduler:
                 self._tasks = json.loads(SCHEDULE_FILE.read_text())
             except Exception:
                 self._tasks = self._default_tasks()
+        if not self._tasks:
+            self._tasks = self._default_tasks()
 
     def _save(self):
         SCHEDULE_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +76,9 @@ class InAppScheduler:
     def toggle_task(self, task_id: str, enabled: bool):
         if task_id in self._tasks:
             self._tasks[task_id]["enabled"] = enabled
-            self._save()
+        else:
+            self._tasks[task_id] = {"enabled": enabled, "name": task_id}
+        self._save()
 
     async def start(self):
         """启动调度循环"""

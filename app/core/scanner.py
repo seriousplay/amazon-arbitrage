@@ -151,8 +151,11 @@ class ScanEngine:
         self.review_analyzer = ReviewAnalyzer()
         self.trend_engine = TrendEngine()
         self._tasks: Dict[str, ScanTask] = {}
+        self._running_asyncio_tasks: Dict[str, asyncio.Task] = {}
         self._review_results: dict = {}  # {task_id: ReviewAnalysisBatch.to_dict()}
         self._lock = asyncio.Lock()
+        # 并发扫描信号量：最多 N 个品类同时扫描，防止触发 Amazon 反爬
+        self._scan_semaphore = asyncio.Semaphore(3)
 
     @staticmethod
     def load_categories() -> dict:
@@ -171,25 +174,33 @@ class ScanEngine:
             task_id = str(uuid.uuid4())[:8]
             task = ScanTask(task_id, category, max_products)
             self._tasks[task_id] = task
-        asyncio.create_task(self._run_discover_only(task, bsr_url, callback))
+        task_obj = asyncio.create_task(self._run_discover_only(task, bsr_url, callback))
+        self._running_asyncio_tasks[task_id] = task_obj
+        task_obj.add_done_callback(lambda _: self._running_asyncio_tasks.pop(task_id, None))
         return task_id
 
     async def _run_discover_only(self, task, bsr_url=None, callback=None):
         try:
             task.status = "running"
             task.phase = Phase.DISCOVER
-            task.current_step = "🔍 正在爬取 Amazon BSR..."
-            task.progress = 0.1
+            task.current_step = "⏳ 等待并发槽位..."
+            task.progress = 0.05
             await self._notify(callback, task)
 
-            products = await self.amazon_spider.scrape(
-                category=task.category, max_pages=min(2, self.config.AMAZON_BSR_PAGES),
-                max_products=task.max_products, bsr_url=bsr_url,
-            )
-            task.current_step = f"📄 已发现 {len(products)} 个商品，正在抓取详情页..."
-            task.progress = 0.3
-            await self._notify(callback, task)
-            products = await self.amazon_spider.enrich_products(products)
+            # 并发控制：最多 3 个品类同时爬取 Amazon
+            async with self._scan_semaphore:
+                task.current_step = "🔍 正在爬取 Amazon BSR..."
+                task.progress = 0.1
+                await self._notify(callback, task)
+
+                products = await self.amazon_spider.scrape(
+                    category=task.category, max_pages=min(2, self.config.AMAZON_BSR_PAGES),
+                    max_products=task.max_products, bsr_url=bsr_url,
+                )
+                task.current_step = f"📄 已发现 {len(products)} 个商品，正在抓取详情页..."
+                task.progress = 0.3
+                await self._notify(callback, task)
+                products = await self.amazon_spider.enrich_products(products)
 
             task.current_step = f"📊 规则过滤中..."
             task.progress = 0.6
@@ -277,7 +288,9 @@ class ScanEngine:
             task = ScanTask(task_id, category, max_products)
             self._tasks[task_id] = task
 
-        asyncio.create_task(self._run_quick_scan(task, bsr_url, callback))
+        task_obj = asyncio.create_task(self._run_quick_scan(task, bsr_url, callback))
+        self._running_asyncio_tasks[task_id] = task_obj
+        task_obj.add_done_callback(lambda _: self._running_asyncio_tasks.pop(task_id, None))
         return task_id
 
     async def _run_quick_scan(
@@ -384,7 +397,9 @@ class ScanEngine:
             task = ScanTask(task_id, category, max_products)
             self._tasks[task_id] = task
 
-        asyncio.create_task(self._run_deep_discover(task, bsr_url, callback))
+        task_obj = asyncio.create_task(self._run_deep_discover(task, bsr_url, callback))
+        self._running_asyncio_tasks[task_id] = task_obj
+        task_obj.add_done_callback(lambda _: self._running_asyncio_tasks.pop(task_id, None))
         return task_id
 
     async def _run_deep_discover(
@@ -603,7 +618,9 @@ class ScanEngine:
             task = ScanTask(task_id, category, max_products)
             self._tasks[task_id] = task
 
-        asyncio.create_task(self._run_discover(task, bsr_url, callback))
+        task_obj = asyncio.create_task(self._run_discover(task, bsr_url, callback))
+        self._running_asyncio_tasks[task_id] = task_obj
+        task_obj.add_done_callback(lambda _: self._running_asyncio_tasks.pop(task_id, None))
         return task_id
 
     async def _run_discover(
@@ -809,22 +826,21 @@ class ScanEngine:
         """并行匹配 Amazon 商品到 1688 供应商"""
         if not products:
             return []
-        
-        from app.core.alibaba_matcher import AlibabaMatcher
-        
-        matcher = AlibabaMatcher(config=self.config)
+
         semaphore = asyncio.Semaphore(3)
         
         async def match_one(product: AmazonProduct) -> Optional[MatchResult]:
             async with semaphore:
                 try:
-                    result = await matcher.match_amazon_product(
+                    supplier = await self.alibaba_matcher.match_amazon_product(
                         asin=product.asin,
                         title=product.title,
                         category=product.category or "Pet Supplies",
                         price=product.price
                     )
-                    return result
+                    if not supplier:
+                        return None
+                    return self.scorer.score_match(product, supplier)
                 except Exception as e:
                     logger.error(f"匹配失败 {product.asin}: {e}")
                     return None
@@ -834,6 +850,24 @@ class ScanEngine:
         valid = [r for r in results if r is not None and not isinstance(r, Exception)]
         logger.info(f"匹配完成: {len(valid)}/{len(products)} 成功")
         return valid
+    async def cancel_all(self) -> int:
+        """取消所有正在运行的任务"""
+        count = 0
+        for tid, task in list(self._running_asyncio_tasks.items()):
+            if not task.done():
+                task.cancel()
+                count += 1
+            scan_task = self._tasks.get(tid)
+            if scan_task:
+                scan_task.status = "cancelled"
+                scan_task.phase = Phase.DONE
+                scan_task.current_step = "已取消"
+                scan_task.completed_at = datetime.now()
+            self._running_asyncio_tasks.pop(tid, None)
+        if count:
+            logger.info(f"已取消 {count} 个运行中的任务")
+        return count
+
     async def cleanup(self):
         await self.amazon_spider.cleanup()
         await self.alibaba_matcher.cleanup()

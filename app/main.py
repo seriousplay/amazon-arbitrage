@@ -68,6 +68,7 @@ async def lifespan(app: FastAPI):
     logger.info("应用关闭中...")
     await app.state.scheduler.stop()
     await app.state.worker.stop()
+    await app.state.scanner.cleanup()
     await app.state.storage.close()
     logger.info("✓ 清理完成")
 
