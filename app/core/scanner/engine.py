@@ -119,6 +119,7 @@ class ScanOrchestrator:
                     # 更新完成状态
                     task.current_step = f"✅ 发现 {len(products)} 个潜在商品（规则过滤后），可进行1688匹配"
 
+                task.phase = Phase.DONE
                 task.status = "completed"
                 task.progress = 100.0
                 task.completed_at = datetime.now()
@@ -163,6 +164,7 @@ class ScanOrchestrator:
                 products = await self.discovery.discover(task)
 
                 if not products:
+                    task.phase = Phase.DONE
                     task.status = "completed"
                     task.progress = 100.0
                     task.completed_at = datetime.now()
@@ -204,6 +206,7 @@ class ScanOrchestrator:
                 breakout = self.analysis.breakout_scorer.score_batch(approved_products, match_map)
                 task.breakout_results = breakout
 
+                task.phase = Phase.DONE
                 task.status = "completed"
                 task.progress = 100.0
                 task.current_step = f"✅ 快速扫描完成：发现 {len(approved_products)} 个产品，匹配 {len(match_results)} 个货源"
@@ -247,6 +250,7 @@ class ScanOrchestrator:
                 products = await self.discovery.discover(task)
 
                 if not products:
+                    task.phase = Phase.DONE
                     task.status = "completed"
                     task.progress = 100.0
                     task.completed_at = datetime.now()
@@ -299,6 +303,7 @@ class ScanOrchestrator:
         approved_products = self.review.get_approved(task_id)
 
         if not approved_products:
+            task.phase = Phase.DONE
             task.status = "completed"
             task.completed_at = datetime.now()
             return True
@@ -322,6 +327,7 @@ class ScanOrchestrator:
                 breakout = self.analysis.breakout_scorer.score_batch(approved_products, match_map)
                 task.breakout_results = breakout
 
+                task.phase = Phase.DONE
                 task.status = "completed"
                 task.progress = 100.0
                 task.current_step = f"✅ 全流程完成：审核 {len(approved_products)} 个产品，匹配 {len(match_results)} 个货源"
