@@ -244,7 +244,7 @@ class ScanEngine:
         self._ensure_orchestrator()
         count = 0
         for task_id in list(self._orchestrator._running_tasks.keys()):
-            if await self._orchestrator.cancel_task(task_id):
+            if self._orchestrator.cancel_task(task_id):
                 count += 1
         return count
 

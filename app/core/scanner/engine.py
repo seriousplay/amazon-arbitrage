@@ -116,6 +116,9 @@ class ScanOrchestrator:
                             p.status = ProductStatus.APPROVED
                     task.amazon_count = len(products)
 
+                    # 更新完成状态
+                    task.current_step = f"✅ 发现 {len(products)} 个潜在商品（规则过滤后），可进行1688匹配"
+
                 task.status = "completed"
                 task.progress = 100.0
                 task.completed_at = datetime.now()
@@ -203,6 +206,7 @@ class ScanOrchestrator:
 
                 task.status = "completed"
                 task.progress = 100.0
+                task.current_step = f"✅ 快速扫描完成：发现 {len(approved_products)} 个产品，匹配 {len(match_results)} 个货源"
                 task.completed_at = datetime.now()
 
             except Exception as e:
@@ -262,7 +266,7 @@ class ScanOrchestrator:
                 task.phase = Phase.REVIEW
                 batch_id = self.review.submit_for_review(task_id, task.products)
                 task.status = "awaiting_review"
-                task.current_step = f"review_batch_{batch_id}"
+                task.current_step = f"⏳ 等待审核（批次 {batch_id}）"
 
                 # 注意：完整流水线在此暂停，等待人工审核完成
                 # 审核完成后，需要调用 resume_task() 继续执行
@@ -312,20 +316,15 @@ class ScanOrchestrator:
                     await self.storage.save_match_results(task_id, match_results)
 
                 # 生成爆款评分（含1688利润数据）
+                task.current_step = "📈 生成爆款评分..."
+                task.progress = 0.9
                 match_map = {r.amazon.asin: r for r in match_results} if match_results else {}
                 breakout = self.analysis.breakout_scorer.score_batch(approved_products, match_map)
                 task.breakout_results = breakout
 
-                # 可选：执行市场分析
-                if getattr(self.config, "ENABLE_ANALYSIS", True):
-                    task.phase = Phase.ANALYSIS
-                    task.current_step = "analyzing_market"
-
-                    await self.analysis.analyze_concentration(approved_products)
-                    # ... 其他分析
-
                 task.status = "completed"
                 task.progress = 100.0
+                task.current_step = f"✅ 全流程完成：审核 {len(approved_products)} 个产品，匹配 {len(match_results)} 个货源"
                 task.completed_at = datetime.now()
 
             except Exception as e:
