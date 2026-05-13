@@ -31,6 +31,7 @@ class Phase(str, Enum):
     DISCOVER = "discover"  # 正在爬取 Amazon
     REVIEW = "review"  # 等待用户审核
     MATCHING = "matching"  # 正在匹配 1688
+    ANALYSIS = "analysis"  # 正在执行市场分析
     DONE = "done"  # 全部完成
 
 

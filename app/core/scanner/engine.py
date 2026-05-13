@@ -18,6 +18,7 @@ from app.core.scanner.discovery import DiscoveryService
 from app.core.scanner.matching import MatchingService
 from app.core.scanner.review import ReviewWorkflow
 from app.core.scanner.analysis import AnalysisService
+from app.core.scanner.models import Phase, ProductStatus
 from app.services.storage import StorageService
 from app.config import settings
 
@@ -87,9 +88,9 @@ class ScanOrchestrator:
         async def run_discovery():
             try:
                 task.status = "running"
-                task.phase = "discover"
+                task.phase = Phase.DISCOVER
 
-                # 1. 发现产品
+                # 1. 发现产品（含规则过滤）
                 products = await self.discovery.discover(task, bsr_url=bsr_url)
 
                 # 2. 丰富产品信息
@@ -99,6 +100,21 @@ class ScanOrchestrator:
                 # 3. 保存到数据库
                 if products:
                     await self.storage.save_products(task_id, products)
+
+                # 4. 生成爆款初评（关键：使用 breakout_scorer 评分）
+                if products:
+                    task.current_step = "📈 生成爆款初评..."
+                    task.progress = 0.8
+                    # 注意：此时还没有 1688 匹配数据，所以传入空 dict
+                    breakout = self.analysis.breakout_scorer.score_batch(products, {})
+                    task.breakout_results = breakout
+
+                    # 将所有产品标记为已批准（用于后续 1688 匹配）
+                    from app.core.scanner.models import ProductStatus
+                    for p in task.products:
+                        if p.status == ProductStatus.PENDING:
+                            p.status = ProductStatus.APPROVED
+                    task.amazon_count = len(products)
 
                 task.status = "completed"
                 task.progress = 100.0
@@ -138,7 +154,7 @@ class ScanOrchestrator:
         async def run_quick_scan():
             try:
                 task.status = "running"
-                task.phase = "discover"
+                task.phase = Phase.DISCOVER
 
                 # 1. 发现产品
                 products = await self.discovery.discover(task)
@@ -154,6 +170,7 @@ class ScanOrchestrator:
 
                 # 3. 保存产品到数据库
                 await self.storage.save_products(task_id, products)
+                task.amazon_count = len(products)
 
                 # 4. 自动批准或进入人工审核
                 if auto_approve:
@@ -166,7 +183,7 @@ class ScanOrchestrator:
                     return
 
                 # 5. 匹配 1688
-                task.phase = "match"
+                task.phase = Phase.MATCHING
                 task.status = "running"
                 task.current_step = "matching_products"
 
@@ -176,6 +193,13 @@ class ScanOrchestrator:
                 # 6. 保存匹配结果
                 if match_results:
                     await self.storage.save_match_results(task_id, match_results)
+
+                # 7. 生成爆款评分（含1688利润数据）
+                task.current_step = "📈 生成爆款评分..."
+                task.progress = 0.9
+                match_map = {r.amazon.asin: r for r in match_results} if match_results else {}
+                breakout = self.analysis.breakout_scorer.score_batch(approved_products, match_map)
+                task.breakout_results = breakout
 
                 task.status = "completed"
                 task.progress = 100.0
@@ -214,7 +238,7 @@ class ScanOrchestrator:
                 task.status = "running"
 
                 # 1. 发现阶段
-                task.phase = "discover"
+                task.phase = Phase.DISCOVER
                 task.current_step = "discovering_products"
                 products = await self.discovery.discover(task)
 
@@ -227,8 +251,15 @@ class ScanOrchestrator:
                 # 2. 丰富产品信息
                 products = await self.discovery.enrich_products(products)
 
-                # 3. 进入人工审核
-                task.phase = "review"
+                # 3. 生成爆款初评（进入审核前的初步评分）
+                task.current_step = "📈 生成爆款初评..."
+                task.progress = 0.8
+                breakout = self.analysis.breakout_scorer.score_batch(products, {})
+                task.breakout_results = breakout
+                task.amazon_count = len(products)
+
+                # 4. 进入人工审核
+                task.phase = Phase.REVIEW
                 batch_id = self.review.submit_for_review(task_id, task.products)
                 task.status = "awaiting_review"
                 task.current_step = f"review_batch_{batch_id}"
@@ -271,7 +302,7 @@ class ScanOrchestrator:
         # 继续执行匹配
         async def continue_matching():
             try:
-                task.phase = "match"
+                task.phase = Phase.MATCHING
                 task.status = "running"
                 task.current_step = "matching_products"
 
@@ -280,12 +311,16 @@ class ScanOrchestrator:
                 if match_results:
                     await self.storage.save_match_results(task_id, match_results)
 
+                # 生成爆款评分（含1688利润数据）
+                match_map = {r.amazon.asin: r for r in match_results} if match_results else {}
+                breakout = self.analysis.breakout_scorer.score_batch(approved_products, match_map)
+                task.breakout_results = breakout
+
                 # 可选：执行市场分析
                 if getattr(self.config, "ENABLE_ANALYSIS", True):
-                    task.phase = "analysis"
+                    task.phase = Phase.ANALYSIS
                     task.current_step = "analyzing_market"
 
-                    await self.analysis.analyze_breakout(approved_products)
                     await self.analysis.analyze_concentration(approved_products)
                     # ... 其他分析
 

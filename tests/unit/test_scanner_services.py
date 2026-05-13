@@ -490,12 +490,26 @@ class TestScanOrchestrator:
     @pytest.mark.asyncio
     async def test_start_discover_only(self, mock_storage, mock_config, mock_spider, mock_rules):
         """测试仅发现模式"""
+        # Mock breakout scorer
+        mock_breakout_scorer = MagicMock()
+        mock_breakout_results = [
+            {
+                "asin": "B001",
+                "title": "Dog Bed",
+                "breakout_score": {"total": 75.0, "grade": "A级潜力"},
+            }
+        ]
+        mock_breakout_scorer.score_batch.return_value = mock_breakout_results
+
+        mock_analysis = MagicMock()
+        mock_analysis.breakout_scorer = mock_breakout_scorer
+
         orchestrator = ScanOrchestrator(
             task_manager=TaskManager(),
             discovery=DiscoveryService(mock_spider, mock_rules),
             matching=MagicMock(),
             review=MagicMock(),
-            analysis=MagicMock(),
+            analysis=mock_analysis,
             storage=mock_storage,
         )
 
@@ -513,18 +527,40 @@ class TestScanOrchestrator:
         assert isinstance(task_id, str)
         assert task_id.startswith("scan_")
         mock_storage.save_products.assert_called_once()
+        # 验证爆款评分被调用
+        mock_breakout_scorer.score_batch.assert_called_once_with(expected_products, {})
+
+        # 验证任务状态
+        task = orchestrator.tasks.get_task(task_id)
+        assert task is not None
+        assert task.breakout_results == mock_breakout_results
+        assert task.approved_count == 1  # 产品应被标记为已批准
 
     @pytest.mark.asyncio
     async def test_start_quick_scan(
         self, mock_storage, mock_config, mock_spider, mock_rules, mock_matcher, mock_scorer
     ):
         """测试快速扫描模式"""
+        # Mock breakout scorer
+        mock_breakout_scorer = MagicMock()
+        mock_breakout_results = [
+            {
+                "asin": "B001",
+                "title": "Dog Bed",
+                "breakout_score": {"total": 80.0, "grade": "S级爆款"},
+            }
+        ]
+        mock_breakout_scorer.score_batch.return_value = mock_breakout_results
+
+        mock_analysis = MagicMock()
+        mock_analysis.breakout_scorer = mock_breakout_scorer
+
         orchestrator = ScanOrchestrator(
             task_manager=TaskManager(),
             discovery=DiscoveryService(mock_spider, mock_rules),
             matching=MatchingService(mock_matcher, mock_scorer, mock_config),
             review=MagicMock(),
-            analysis=MagicMock(),
+            analysis=mock_analysis,
             storage=mock_storage,
         )
 
@@ -540,11 +576,29 @@ class TestScanOrchestrator:
         task_id = await orchestrator.start_quick_scan("Dogs", max_products=10)
 
         # 等待后台任务完成
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.5)
 
         assert isinstance(task_id, str)
         mock_storage.save_products.assert_called_once()
         mock_storage.save_match_results.assert_called_once()
+
+        # Debug: check task status
+        task = orchestrator.tasks.get_task(task_id)
+        print(f"\nTask status: {task.status if task else 'None'}")
+        print(f"Task error: {task.error if task else 'None'}")
+        print(f"Approved count: {task.approved_count if task else 'None'}")
+        print(f"Match results: {task.match_count if task else 'None'}")
+
+        # 验证爆款评分被调用（含匹配数据）
+        mock_breakout_scorer.score_batch.assert_called_once()
+        call_args = mock_breakout_scorer.score_batch.call_args
+        assert call_args[0][0] == expected_products  # 第一个参数是产品列表
+        assert isinstance(call_args[0][1], dict)  # 第二个参数是匹配字典
+
+        # 验证任务完成状态
+        task = orchestrator.tasks.get_task(task_id)
+        assert task is not None
+        assert task.breakout_results == mock_breakout_results
 
     @pytest.mark.asyncio
     async def test_cancel_task(self, mock_storage, mock_config, mock_spider, mock_rules):

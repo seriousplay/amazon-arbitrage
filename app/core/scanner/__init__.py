@@ -215,6 +215,16 @@ class ScanEngine:
     async def update_trend_from_web(self, keyword):
         return {"success": False, "message": "Not implemented in new architecture"}
 
+    def load_categories(self):
+        """加载品类列表（向后兼容）"""
+        from pathlib import Path
+        import json
+
+        CATEGORIES_FILE = Path(__file__).parent.parent.parent.parent / "data" / "categories.json"
+        if CATEGORIES_FILE.exists():
+            return json.loads(CATEGORIES_FILE.read_text())
+        return {"categories": [], "rules": {}}
+
     async def _match_parallel(self, task, products, callback) -> List[MatchResult]:
         """
         并行匹配 Amazon 商品到 1688 供应商（兼容旧版测试）
